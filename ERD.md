@@ -20,7 +20,7 @@ erDiagram
         INTEGER owner_id FK "NOT NULL, references users.id"
         TEXT name "NOT NULL, not blank"
         TEXT description "NOT NULL"
-        INTEGER cost_per_day "NOT NULL, CHECK >= 0"
+        REAL cost_per_day "NOT NULL, CHECK >= 0"
         TEXT status "NOT NULL, AVAILABLE or RENTED or UNLISTED"
     }
 
@@ -39,8 +39,8 @@ erDiagram
 | Table | State |
 |---|---|
 | `users` | Implemented in `schema.sql` (merged to `main`). |
-| `items` | **Proposal.** Columns to be agreed by the team. |
-| `rentals` | **Proposal.** Columns to be agreed by the team. |
+| `items` | Implemented in `schema.sql`. |
+| `rentals` | Implemented in `schema.sql`. |
 
 ## Rules the schema enforces
 
