@@ -127,4 +127,16 @@ class UserValidatorTest {
         // a short password is not a login error, it simply fails to match later
         assertDoesNotThrow(() -> UserValidator.validateLogin("ab", "x"));
     }
+
+    // ---------- normalizing ----------
+
+    @Test
+    void normalizeUsernameRemovesPaddingSpaces() {
+        assertEquals("bob", UserValidator.normalizeUsername("  bob  "));
+    }
+
+    @Test
+    void normalizeUsernameLeavesNullAlone() {
+        assertNull(UserValidator.normalizeUsername(null));
+    }
 }
