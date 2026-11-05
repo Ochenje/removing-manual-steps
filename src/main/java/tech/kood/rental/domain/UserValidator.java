@@ -19,18 +19,22 @@ public final class UserValidator {
         // utility class: nobody should create one
     }
 
+    // The form of the username that gets stored: no padding spaces.
+    // The service calls this before saving, so " bob " is stored as "bob".
+    public static String normalizeUsername(String username) {
+        return username == null ? null : username.trim();
+    }
+
     // All the rules, used when someone registers
     public static void validateRegistration(String username, String password) {
         requireUsername(username);
 
-        // Trim surrounding whitespace when checking username length
-        int length = username.trim().length();
-
+        // Measure the normalized name, because that is the one that will be stored
+        int length = normalizeUsername(username).length();
         if (length < USERNAME_MIN) {
             throw new ValidationException("User", "username", "too_short",
                     "username must be at least " + USERNAME_MIN + " characters");
         }
-
         if (length > USERNAME_MAX) {
             throw new ValidationException("User", "username", "too_long",
                     "username must be at most " + USERNAME_MAX + " characters");
@@ -51,7 +55,7 @@ public final class UserValidator {
         }
     }
 
-    // Only the blank checks, used at login so we don't reveal password rules
+    // Only the blank checks, used at login so we don't reveal the password rules
     public static void validateLogin(String username, String password) {
         requireUsername(username);
         requirePassword(password);
