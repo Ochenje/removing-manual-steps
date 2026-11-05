@@ -71,6 +71,14 @@ class UserValidatorTest {
         assertDoesNotThrow(() -> UserValidator.validateRegistration("a".repeat(30), GOOD_PASSWORD));
     }
 
+    @Test
+    void usernameWithUnsupportedCharactersIsRejected() {
+        ValidationException e = registrationError("bad-name", GOOD_PASSWORD);
+
+        assertEquals("username", e.getField());
+        assertEquals("invalid_format", e.getReason());
+    }
+
     // ---------- password ----------
 
     @Test

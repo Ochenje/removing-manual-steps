@@ -1,6 +1,7 @@
 package tech.kood.rental.infrastructure;
 
 import java.time.Instant;
+import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -18,28 +19,47 @@ public final class StructuredLogger {
     }
 
     public static void info(String event) {
-        write("INFO", Level.INFO, event, null);
+        write("INFO", Level.INFO, event, Map.of(), null);
+    }
+
+    public static void info(String event, Map<String, ?> fields) {
+        write("INFO", Level.INFO, event, fields, null);
     }
 
     public static void warn(String event) {
-        write("WARN", Level.WARNING, event, null);
+        write("WARN", Level.WARNING, event, Map.of(), null);
     }
 
     public static void error(String event) {
-        write("ERROR", Level.SEVERE, event, null);
+        write("ERROR", Level.SEVERE, event, Map.of(), null);
     }
 
     public static void error(String event, Throwable exception) {
-        write("ERROR", Level.SEVERE, event, exception);
+        write("ERROR", Level.SEVERE, event, Map.of(), exception);
+    }
+
+    public static void error(
+            String event,
+            Map<String, ?> fields,
+            Throwable exception) {
+        write("ERROR", Level.SEVERE, event, fields, exception);
     }
 
     private static void write(
             String label,
             Level javaLevel,
             String event,
+            Map<String, ?> fields,
             Throwable exception) {
 
-        String safeEvent = sanitize(event);
+        StringBuilder safeEvent = new StringBuilder(sanitize(event));
+        if (fields != null) {
+            fields.forEach((key, value) -> safeEvent
+                    .append(" | ")
+                    .append(sanitize(key))
+                    .append('=')
+                    .append(sanitize(String.valueOf(value))));
+        }
         String timestamp = Instant.now().toString();
 
         String message = timestamp + " | "

@@ -1,0 +1,168 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>RentalRepository.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">multi-user-rental-tracker</a> &gt; <a href="index.source.html" class="el_package">tech.kood.rental.repository</a> &gt; <span class="el_source">RentalRepository.java</span></div><h1>RentalRepository.java</h1><pre class="source lang-java linenums">
+package tech.kood.rental.repository;
+
+import tech.kood.rental.domain.Rental;
+import tech.kood.rental.infrastructure.DatabaseConnection;
+import tech.kood.rental.repository.exception.DatabaseException;
+
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.Optional;
+
+public class RentalRepository {
+
+    private static final String COLUMNS =
+            &quot;id, item_id, renter_id, days, rented_at, returned_at&quot;;
+
+<span class="fc" id="L22">    private static final DateTimeFormatter STORED_TIME =</span>
+<span class="fc" id="L23">            DateTimeFormatter.ofPattern(&quot;yyyy-MM-dd HH:mm:ss&quot;);</span>
+
+    private final DatabaseConnection database;
+
+<span class="fc" id="L27">    public RentalRepository(DatabaseConnection database) {</span>
+<span class="fc" id="L28">        this.database = database;</span>
+<span class="fc" id="L29">    }</span>
+
+    public Rental insert(Rental rental) {
+<span class="fc" id="L32">        try (Connection connection = database.getConnection()) {</span>
+<span class="fc" id="L33">            return insert(connection, rental);</span>
+<span class="fc" id="L34">        } catch (SQLException e) {</span>
+<span class="fc" id="L35">            throw new DatabaseException(&quot;insert rental&quot;, e);</span>
+        }
+    }
+
+    public Rental insert(Connection connection, Rental rental)
+            throws SQLException {
+
+<span class="fc" id="L42">        String sql = &quot;INSERT INTO rentals (item_id, renter_id, days) &quot;</span>
+                + &quot;VALUES (?, ?, ?)&quot;;
+
+<span class="fc" id="L45">        try (PreparedStatement statement =</span>
+<span class="fc" id="L46">                     connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {</span>
+
+<span class="fc" id="L48">            statement.setLong(1, rental.itemId());</span>
+<span class="fc" id="L49">            statement.setLong(2, rental.renterId());</span>
+<span class="fc" id="L50">            statement.setInt(3, rental.days());</span>
+
+<span class="fc" id="L52">            statement.executeUpdate();</span>
+
+<span class="fc" id="L54">            try (ResultSet keys = statement.getGeneratedKeys()) {</span>
+<span class="pc bpc" id="L55" title="1 of 2 branches missed.">                if (!keys.next()) {</span>
+<span class="nc" id="L56">                    throw new SQLException(</span>
+<span class="nc" id="L57">                            &quot;The inserted rental ID could not be retrieved.&quot;);</span>
+                }
+
+<span class="fc" id="L60">                Rental saved = readById(connection, keys.getLong(1));</span>
+
+<span class="pc bpc" id="L62" title="1 of 2 branches missed.">                if (saved == null) {</span>
+<span class="nc" id="L63">                    throw new SQLException(</span>
+<span class="nc" id="L64">                            &quot;The inserted rental could not be read back.&quot;);</span>
+                }
+
+<span class="fc" id="L67">                return saved;</span>
+            }
+        }
+    }
+
+    public Optional&lt;Rental&gt; findById(long id) {
+<span class="fc" id="L73">        try (Connection connection = database.getConnection()) {</span>
+<span class="fc" id="L74">            return Optional.ofNullable(readById(connection, id));</span>
+<span class="fc" id="L75">        } catch (SQLException e) {</span>
+<span class="fc" id="L76">            throw new DatabaseException(&quot;find rental by id&quot;, e);</span>
+        }
+    }
+
+    public Optional&lt;Rental&gt; findById(Connection connection, long id)
+            throws SQLException {
+<span class="fc" id="L82">        return Optional.ofNullable(readById(connection, id));</span>
+    }
+
+    public Optional&lt;Rental&gt; findActiveByItemId(long itemId) {
+<span class="fc" id="L86">        try (Connection connection = database.getConnection()) {</span>
+<span class="fc" id="L87">            return findActiveByItemId(connection, itemId);</span>
+<span class="fc" id="L88">        } catch (SQLException e) {</span>
+<span class="fc" id="L89">            throw new DatabaseException(&quot;find active rental by item id&quot;, e);</span>
+        }
+    }
+
+    public Optional&lt;Rental&gt; findActiveByItemId(
+            Connection connection, long itemId) throws SQLException {
+
+<span class="fc" id="L96">        String sql = &quot;SELECT &quot; + COLUMNS</span>
+                + &quot; FROM rentals WHERE item_id = ? AND returned_at IS NULL &quot;
+                + &quot;ORDER BY id DESC LIMIT 1&quot;;
+
+<span class="fc" id="L100">        try (PreparedStatement statement = connection.prepareStatement(sql)) {</span>
+<span class="fc" id="L101">            statement.setLong(1, itemId);</span>
+
+<span class="fc" id="L103">            try (ResultSet row = statement.executeQuery()) {</span>
+<span class="fc bfc" id="L104" title="All 2 branches covered.">                return row.next()</span>
+<span class="fc" id="L105">                        ? Optional.of(map(row))</span>
+<span class="fc" id="L106">                        : Optional.empty();</span>
+            }
+        }
+    }
+
+    public boolean confirmReturn(long rentalId) {
+<span class="fc" id="L112">        try (Connection connection = database.getConnection()) {</span>
+<span class="fc" id="L113">            return confirmReturn(connection, rentalId);</span>
+<span class="fc" id="L114">        } catch (SQLException e) {</span>
+<span class="fc" id="L115">            throw new DatabaseException(&quot;confirm rental return&quot;, e);</span>
+        }
+    }
+
+    public boolean confirmReturn(Connection connection, long rentalId)
+            throws SQLException {
+
+<span class="fc" id="L122">        String sql = &quot;UPDATE rentals &quot;</span>
+                + &quot;SET returned_at = strftime('%Y-%m-%d %H:%M:%S', 'now') &quot;
+                + &quot;WHERE id = ? AND returned_at IS NULL&quot;;
+
+<span class="fc" id="L126">        try (PreparedStatement statement = connection.prepareStatement(sql)) {</span>
+<span class="fc" id="L127">            statement.setLong(1, rentalId);</span>
+<span class="fc bfc" id="L128" title="All 2 branches covered.">            return statement.executeUpdate() &gt; 0;</span>
+        }
+    }
+
+    private Rental readById(Connection connection, long id)
+            throws SQLException {
+
+<span class="fc" id="L135">        String sql = &quot;SELECT &quot; + COLUMNS + &quot; FROM rentals WHERE id = ?&quot;;</span>
+
+<span class="fc" id="L137">        try (PreparedStatement statement = connection.prepareStatement(sql)) {</span>
+<span class="fc" id="L138">            statement.setLong(1, id);</span>
+
+<span class="fc" id="L140">            try (ResultSet row = statement.executeQuery()) {</span>
+<span class="fc bfc" id="L141" title="All 2 branches covered.">                return row.next() ? map(row) : null;</span>
+            }
+        }
+    }
+
+    private Rental map(ResultSet row) throws SQLException {
+<span class="fc" id="L147">        String rentedAtValue = row.getString(&quot;rented_at&quot;);</span>
+<span class="fc" id="L148">        String returnedAtValue = row.getString(&quot;returned_at&quot;);</span>
+
+<span class="pc bpc" id="L150" title="1 of 2 branches missed.">        LocalDateTime rentedAt = rentedAtValue == null</span>
+<span class="nc" id="L151">                ? null</span>
+<span class="fc" id="L152">                : LocalDateTime.parse(rentedAtValue, STORED_TIME);</span>
+
+<span class="fc bfc" id="L154" title="All 2 branches covered.">        LocalDateTime returnedAt = returnedAtValue == null</span>
+<span class="fc" id="L155">                ? null</span>
+<span class="fc" id="L156">                : LocalDateTime.parse(returnedAtValue, STORED_TIME);</span>
+
+<span class="fc" id="L158">        return new Rental(</span>
+<span class="fc" id="L159">                row.getLong(&quot;id&quot;),</span>
+<span class="fc" id="L160">                row.getLong(&quot;item_id&quot;),</span>
+<span class="fc" id="L161">                row.getLong(&quot;renter_id&quot;),</span>
+<span class="fc" id="L162">                row.getInt(&quot;days&quot;),</span>
+<span class="fc" id="L163">                rentedAt,</span>
+<span class="fc" id="L164">                returnedAt</span>
+        );
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.14.202510111229</span></div></body></html>

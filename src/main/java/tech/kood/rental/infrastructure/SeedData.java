@@ -62,7 +62,7 @@ public final class SeedData {
         Files.createDirectories(absolute.getParent());
         Files.deleteIfExists(absolute);
 
-        // TODO (after DatabaseConnection is merged): use it instead of opening the connection here
+        
         String url = "jdbc:sqlite:" + absolute.toString().replace('\\', '/');
         try (Connection connection = DriverManager.getConnection(url)) {
             // SQLite ignores foreign keys unless every connection switches them on

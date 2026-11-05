@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ItemValidator.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">multi-user-rental-tracker</a> &gt; <a href="index.source.html" class="el_package">tech.kood.rental.domain</a> &gt; <span class="el_source">ItemValidator.java</span></div><h1>ItemValidator.java</h1><pre class="source lang-java linenums">package tech.kood.rental.domain;
+
+/**
+ * Checks Item input before it reaches the service and the database.
+ * It throws a ValidationException with a readable message when a rule is broken.
+ * Checks that need the database (does the item exist, is it yours) belong to the service.
+ */
+public final class ItemValidator {
+
+    private ItemValidator() {
+        // utility class: nobody should create one
+    }
+
+    // The form of a text that gets stored: no padding spaces.
+    // The service calls this before saving, so &quot; Drill &quot; is stored as &quot;Drill&quot;.
+    public static String normalize(String text) {
+<span class="fc bfc" id="L17" title="All 2 branches covered.">        return text == null ? null : text.trim();</span>
+    }
+
+    // All the rules, used when someone lists an item
+    public static void validate(String name, String description, double costPerDay) {
+<span class="fc" id="L22">        requireText(name, &quot;name&quot;, &quot;item name must not be empty&quot;);</span>
+<span class="fc" id="L23">        requireText(description, &quot;description&quot;, &quot;item description must not be empty&quot;);</span>
+
+        // NaN and infinity are not real prices
+<span class="fc bfc" id="L26" title="All 4 branches covered.">        if (Double.isNaN(costPerDay) || Double.isInfinite(costPerDay)) {</span>
+<span class="fc" id="L27">            throw new ValidationException(&quot;Item&quot;, &quot;cost&quot;, &quot;invalid&quot;,</span>
+<span class="fc" id="L28">                    &quot;cost per day must be a valid number&quot;);</span>
+        }
+<span class="fc bfc" id="L30" title="All 2 branches covered.">        if (costPerDay &lt; 0) {</span>
+<span class="fc" id="L31">            throw new ValidationException(&quot;Item&quot;, &quot;cost&quot;, &quot;negative&quot;,</span>
+<span class="fc" id="L32">                    &quot;cost per day must not be negative&quot;);</span>
+        }
+<span class="fc" id="L34">    }</span>
+
+    // null, empty and whitespace-only all count as blank
+    private static void requireText(String text, String field, String message) {
+<span class="fc bfc" id="L38" title="All 4 branches covered.">        if (text == null || text.isBlank()) {</span>
+<span class="fc" id="L39">            throw new ValidationException(&quot;Item&quot;, field, &quot;blank&quot;, message);</span>
+        }
+<span class="fc" id="L41">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.14.202510111229</span></div></body></html>

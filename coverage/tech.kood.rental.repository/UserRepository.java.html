@@ -1,0 +1,145 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>UserRepository.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">multi-user-rental-tracker</a> &gt; <a href="index.source.html" class="el_package">tech.kood.rental.repository</a> &gt; <span class="el_source">UserRepository.java</span></div><h1>UserRepository.java</h1><pre class="source lang-java linenums">package tech.kood.rental.repository;
+
+import tech.kood.rental.domain.User;
+import tech.kood.rental.infrastructure.DatabaseConnection;
+import tech.kood.rental.repository.exception.DatabaseException;
+import tech.kood.rental.repository.exception.DuplicateUsernameException;
+
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
+import java.util.Optional;
+
+/**
+ * The only place that reads and writes the users table.
+ * Every method opens its own connection and closes it again, even when it fails.
+ * Failures become readable exceptions, so no SQLite wording reaches the user.
+ */
+public class UserRepository {
+
+    // schema.sql stores times as text like 2026-06-16 14:30:05
+<span class="fc" id="L26">    private static final DateTimeFormatter STORED_TIME =</span>
+<span class="fc" id="L27">            DateTimeFormatter.ofPattern(&quot;yyyy-MM-dd HH:mm:ss&quot;);</span>
+
+<span class="fc" id="L29">    private static final String COLUMNS = &quot;id, username, password, created_at&quot;;</span>
+
+    // Knows how to hand out connections
+    private final DatabaseConnection database;
+
+<span class="fc" id="L34">    public UserRepository(DatabaseConnection database) {</span>
+<span class="fc" id="L35">        this.database = database;</span>
+<span class="fc" id="L36">    }</span>
+
+    // Saves a new user and returns them as stored (with id and created_at filled in).
+    // passwordHash must already be hashed, never the plain password.
+    public User insert(String username, String passwordHash) {
+        // The ? marks are blanks we fill in below, so odd characters
+        // in a name can never be treated as SQL commands
+<span class="fc" id="L43">        String sql = &quot;INSERT INTO users (username, password) VALUES (?, ?)&quot;;</span>
+
+<span class="fc" id="L45">        try (Connection connection = database.getConnection();</span>
+<span class="fc" id="L46">             PreparedStatement statement =</span>
+<span class="fc" id="L47">                     connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {</span>
+
+<span class="fc" id="L49">            statement.setString(1, username);</span>
+<span class="fc" id="L50">            statement.setString(2, passwordHash);</span>
+<span class="fc" id="L51">            statement.executeUpdate();</span>
+
+            // Ask the database which id it just handed out, then read the row back
+<span class="fc" id="L54">            try (ResultSet keys = statement.getGeneratedKeys()) {</span>
+<span class="fc" id="L55">                keys.next();</span>
+<span class="fc" id="L56">                User saved = readById(connection, keys.getLong(1));</span>
+<span class="pc bpc" id="L57" title="1 of 2 branches missed.">                if (saved == null) {</span>
+<span class="nc" id="L58">                    throw new SQLException(&quot;the inserted user could not be read back&quot;);</span>
+                }
+<span class="fc" id="L60">                return saved;</span>
+            }
+
+<span class="fc" id="L63">        } catch (SQLException e) {</span>
+            
+<span class="fc bfc" id="L65" title="All 2 branches covered.">            if (isDuplicateUsername(e)) {</span>
+<span class="fc" id="L66">                throw new DuplicateUsernameException(e);</span>
+            }
+<span class="fc" id="L68">            throw new DatabaseException(&quot;insert user&quot;, e);</span>
+        }
+    }
+
+    // Finds a user by id. A missing id is normal, so we return an empty box.
+    public Optional&lt;User&gt; findById(long id) {
+<span class="fc" id="L74">        try (Connection connection = database.getConnection()) {</span>
+<span class="fc" id="L75">            return Optional.ofNullable(readById(connection, id));</span>
+<span class="fc" id="L76">        } catch (SQLException e) {</span>
+<span class="fc" id="L77">            throw new DatabaseException(&quot;find user by id&quot;, e);</span>
+        }
+    }
+
+    // Finds a user by username. A missing name is normal, so we return an empty box.
+    public Optional&lt;User&gt; findByUsername(String username) {
+<span class="fc" id="L83">        String sql = &quot;SELECT &quot; + COLUMNS + &quot; FROM users WHERE username = ?&quot;;</span>
+
+<span class="fc" id="L85">        try (Connection connection = database.getConnection();</span>
+<span class="fc" id="L86">             PreparedStatement statement = connection.prepareStatement(sql)) {</span>
+
+<span class="fc" id="L88">            statement.setString(1, username);</span>
+
+<span class="fc" id="L90">            try (ResultSet row = statement.executeQuery()) {</span>
+<span class="fc bfc" id="L91" title="All 2 branches covered.">                return row.next() ? Optional.of(map(row)) : Optional.empty();</span>
+            }
+
+<span class="fc" id="L94">        } catch (SQLException e) {</span>
+<span class="fc" id="L95">            throw new DatabaseException(&quot;find user by username&quot;, e);</span>
+        }
+    }
+
+    // True when the username is already taken (the service uses this before registering)
+    public boolean existsByUsername(String username) {
+<span class="fc" id="L101">        return findByUsername(username).isPresent();</span>
+    }
+
+    // ---------- helpers ----------
+
+    // Reads one user on a connection that is already open. Returns null when there is no such id.
+    private User readById(Connection connection, long id) throws SQLException {
+<span class="fc" id="L108">        String sql = &quot;SELECT &quot; + COLUMNS + &quot; FROM users WHERE id = ?&quot;;</span>
+
+<span class="fc" id="L110">        try (PreparedStatement statement = connection.prepareStatement(sql)) {</span>
+<span class="fc" id="L111">            statement.setLong(1, id);</span>
+
+<span class="fc" id="L113">            try (ResultSet row = statement.executeQuery()) {</span>
+<span class="fc bfc" id="L114" title="All 2 branches covered.">                return row.next() ? map(row) : null;</span>
+            }
+        }
+    }
+
+    // Turns one database row into a User object
+    private User map(ResultSet row) throws SQLException {
+<span class="fc" id="L121">        return new User(</span>
+<span class="fc" id="L122">                row.getLong(&quot;id&quot;),</span>
+<span class="fc" id="L123">                row.getString(&quot;username&quot;),</span>
+<span class="fc" id="L124">                row.getString(&quot;password&quot;),</span>
+<span class="fc" id="L125">                parseTime(row.getString(&quot;created_at&quot;)));</span>
+    }
+
+    // A time that cannot be read is reported like any other database problem
+    private static LocalDateTime parseTime(String text) throws SQLException {
+        try {
+<span class="fc" id="L131">            return LocalDateTime.parse(text, STORED_TIME);</span>
+<span class="fc" id="L132">        } catch (DateTimeParseException e) {</span>
+<span class="fc" id="L133">            throw new SQLException(&quot;a stored time could not be read: &quot; + text, e);</span>
+        }
+    }
+
+    // SQLite words a taken username as &quot;UNIQUE constraint failed: users.username&quot;.
+    // Other constraint failures (a missing username, a blank one) read differently,
+    // so they are never mistaken for a taken name.
+    private static boolean isDuplicateUsername(SQLException e) {
+<span class="fc" id="L141">        String message = e.getMessage();</span>
+<span class="pc bpc" id="L142" title="1 of 4 branches missed.">        return message != null &amp;&amp; message.contains(&quot;UNIQUE constraint failed: users.username&quot;);</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.14.202510111229</span></div></body></html>

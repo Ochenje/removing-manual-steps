@@ -13,6 +13,10 @@ import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
+import java.util.logging.Handler;
+import java.util.logging.Level;
+import java.util.logging.LogRecord;
+import java.util.logging.Logger;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -111,6 +115,14 @@ class UserServiceTest {
         assertThrows(
                 ValidationException.class,
                 () -> userService.register("john_doe", "   "));
+    }
+
+    @Test
+    void registerRejectsPasswordShorterThanValidatorMinimum() {
+        assertThrows(
+                ValidationException.class,
+                () -> userService.register("john_doe", "short12"));
+        assertTrue(repository.users.isEmpty());
     }
 
     @Test
@@ -221,6 +233,45 @@ class UserServiceTest {
         assertThrows(
                 ValidationException.class,
                 () -> userService.login("john_doe", "wrongPassword"));
+    }
+
+    @Test
+    void authenticationLogsNeverContainPlainPasswords() {
+        Logger logger = Logger.getLogger("tech.kood.rental");
+        boolean originalParentHandlers = logger.getUseParentHandlers();
+        Level originalLevel = logger.getLevel();
+        StringBuilder messages = new StringBuilder();
+        Handler handler = new Handler() {
+            @Override
+            public void publish(LogRecord record) {
+                messages.append(record.getMessage()).append('\n');
+            }
+
+            @Override
+            public void flush() {
+            }
+
+            @Override
+            public void close() {
+            }
+        };
+        logger.addHandler(handler);
+        logger.setUseParentHandlers(false);
+        logger.setLevel(Level.ALL);
+
+        try {
+            userService.register("john_doe", "registration-secret");
+            assertThrows(
+                    ValidationException.class,
+                    () -> userService.login("john_doe", "login-secret"));
+        } finally {
+            logger.removeHandler(handler);
+            logger.setUseParentHandlers(originalParentHandlers);
+            logger.setLevel(originalLevel);
+        }
+
+        assertFalse(messages.toString().contains("registration-secret"));
+        assertFalse(messages.toString().contains("login-secret"));
     }
 
     @Test

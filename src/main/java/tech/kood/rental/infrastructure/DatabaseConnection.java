@@ -5,12 +5,16 @@ import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Proxy;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * Hands out connections to the SQLite database file and builds the tables on first start.
@@ -26,7 +30,6 @@ public class DatabaseConnection {
         this.file = Path.of(databasePath).toAbsolutePath();
         // SQLite is happy with forward slashes on every system, Windows included
         this.url = "jdbc:sqlite:" + file.toString().replace('\\', '/');
-        // TODO (after the logger is merged): log "db.open" when the database opens
     }
 
     // A fresh connection for ONE job. Use it in try-with-resources so it always closes:
@@ -37,10 +40,21 @@ public class DatabaseConnection {
         try (Statement statement = connection.createStatement()) {
             statement.execute("PRAGMA foreign_keys = ON");
         } catch (SQLException e) {
-            connection.close();   // do not leave a half-ready connection open
+            try {
+                connection.close();
+            } catch (SQLException closeException) {
+                e.addSuppressed(closeException);
+            }
+            StructuredLogger.error(
+                    "db.connection.open.failed",
+                    Map.of("database", file),
+                    e);
             throw e;
         }
-        return connection;
+        StructuredLogger.info(
+                "db.connection.opened",
+                Map.of("database", file));
+        return logClose(connection);
     }
 
     // Creates the data folder and the tables if they are missing. Safe to run on every start.
@@ -92,5 +106,38 @@ public class DatabaseConnection {
             }
         }
         return statements;
+    }
+
+    private Connection logClose(Connection connection) {
+        AtomicBoolean closed = new AtomicBoolean();
+        return (Connection) Proxy.newProxyInstance(
+                Connection.class.getClassLoader(),
+                new Class<?>[] {Connection.class},
+                (proxy, method, arguments) -> {
+                    if (method.getName().equals("close")
+                            && method.getParameterCount() == 0) {
+                        if (closed.compareAndSet(false, true)) {
+                            try {
+                                connection.close();
+                                StructuredLogger.info(
+                                        "db.connection.closed",
+                                        Map.of("database", file));
+                            } catch (SQLException exception) {
+                                StructuredLogger.error(
+                                        "db.connection.close.failed",
+                                        Map.of("database", file),
+                                        exception);
+                                throw exception;
+                            }
+                        }
+                        return null;
+                    }
+
+                    try {
+                        return method.invoke(connection, arguments);
+                    } catch (InvocationTargetException exception) {
+                        throw exception.getCause();
+                    }
+                });
     }
 }

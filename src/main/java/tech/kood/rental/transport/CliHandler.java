@@ -1,12 +1,16 @@
 package tech.kood.rental.transport;
 
 import tech.kood.rental.domain.Item;
+import tech.kood.rental.domain.Rental;
 import tech.kood.rental.domain.ValidationException;
 import tech.kood.rental.repository.exception.DatabaseException;
 import tech.kood.rental.repository.exception.DuplicateUsernameException;
 import tech.kood.rental.service.ItemService;
+import tech.kood.rental.service.RentalService;
 import tech.kood.rental.service.UserService;
 
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
@@ -21,21 +25,28 @@ public class CliHandler {
 
     private final UserService userService;
     private final ItemService itemService;
+    private final RentalService rentalService;
     private final Scanner scanner;
     private UserService.AuthenticatedUser currentUser;
     private boolean running = true;
     private boolean endOfInput;
 
-    public CliHandler(UserService userService, ItemService itemService) {
-        this(userService, itemService, new Scanner(System.in));
+    public CliHandler(
+            UserService userService,
+            ItemService itemService,
+            RentalService rentalService) {
+        this(userService, itemService, rentalService, new Scanner(System.in));
     }
 
     public CliHandler(
             UserService userService,
             ItemService itemService,
+            RentalService rentalService,
             Scanner scanner) {
         this.userService = Objects.requireNonNull(userService, "userService");
         this.itemService = Objects.requireNonNull(itemService, "itemService");
+        this.rentalService = Objects.requireNonNull(
+                rentalService, "rentalService");
         this.scanner = Objects.requireNonNull(scanner, "scanner");
     }
 
@@ -75,8 +86,9 @@ public class CliHandler {
         System.out.println("1) List an item");
         System.out.println("2) View my inventory");
         System.out.println("3) Browse listings");
-        System.out.println("4) Log out");
-        System.out.println("5) Exit");
+        System.out.println("4) Confirm a return");
+        System.out.println("5) Log out");
+        System.out.println("6) Exit");
 
         String choice = readLine("> ");
         if (choice == null) {
@@ -87,11 +99,12 @@ public class CliHandler {
             case "1" -> handleListItem();
             case "2" -> handleViewInventory();
             case "3" -> handleBrowseListings();
-            case "4" -> {
+            case "4" -> handleConfirmReturns();
+            case "5" -> {
                 currentUser = null;
                 System.out.println("Logged out.");
             }
-            case "5" -> running = false;
+            case "6" -> running = false;
             default -> System.out.println("Invalid option.");
         }
     }
@@ -161,36 +174,65 @@ public class CliHandler {
     }
 
     private void handleViewInventory() {
-        runServiceAction(() -> {
-            List<Item> items = itemService.viewMyInventory(currentUser.id());
-            if (items.isEmpty()) {
-                System.out.println("Your inventory is empty.");
+        int page = 1;
+        while (true) {
+            List<Item> items;
+            long totalItems;
+            try {
+                totalItems = itemService.countMyInventory(currentUser.id());
+                if (totalItems == 0) {
+                    System.out.println("Your inventory is empty.");
+                    return;
+                }
+                page = Math.min(page, pageCount(totalItems));
+                items = itemService.viewMyInventory(currentUser.id(), page);
+            } catch (RuntimeException exception) {
+                reportServiceError(exception);
                 return;
             }
 
-            System.out.println("\n=== My Inventory ===");
+            System.out.println("\n=== My Inventory (page "
+                    + page + " of " + pageCount(totalItems) + ") ===");
             for (int i = 0; i < items.size(); i++) {
                 printItem(i + 1, items.get(i), true);
             }
-            System.out.println((items.size() + 1) + ") Back to menu");
+            int nextOption = -1;
+            int previousOption = -1;
+            int menuOption = items.size() + 1;
+            if (page < pageCount(totalItems)) {
+                nextOption = menuOption++;
+                System.out.println(nextOption + ") Next page");
+            }
+            if (page > 1) {
+                previousOption = menuOption++;
+                System.out.println(previousOption + ") Previous page");
+            }
+            System.out.println(menuOption + ") Back to menu");
 
-            String input = readLine("Select an item to manage or go back: ");
+            String input = readLine("> ");
             if (input == null) {
                 return;
             }
             Integer choice = parseSelection(input);
             if (choice == null) {
+                continue;
+            }
+            if (choice == menuOption) {
                 return;
             }
-            if (choice == items.size() + 1) {
-                return;
-            }
-            if (choice < 1 || choice > items.size()) {
+            if (nextOption != -1 && choice == nextOption) {
+                page++;
+            } else if (previousOption != -1 && choice == previousOption) {
+                page--;
+            } else if (choice >= 1 && choice <= items.size()) {
+                handleManageItem(items.get(choice - 1));
+                if (endOfInput) {
+                    return;
+                }
+            } else {
                 System.out.println("Invalid selection.");
-                return;
             }
-            handleManageItem(items.get(choice - 1));
-        });
+        }
     }
 
     private void handleManageItem(Item item) {
@@ -221,42 +263,40 @@ public class CliHandler {
     }
 
     private void handleBrowseListings() {
-        int currentPage = 0;
+        int currentPage = 1;
         while (true) {
             final List<Item> availableItems;
+            final long totalItems;
             try {
+                totalItems =
+                        itemService.countAvailableItems(currentUser.id());
+                if (totalItems == 0) {
+                    System.out.println("No items available to browse.");
+                    return;
+                }
+                currentPage = Math.min(currentPage, pageCount(totalItems));
                 availableItems =
-                        itemService.browseAvailableItems(currentUser.id());
+                        itemService.browseAvailableItems(
+                                currentUser.id(), currentPage);
             } catch (RuntimeException exception) {
                 reportServiceError(exception);
                 return;
             }
 
-            if (availableItems.isEmpty()) {
-                System.out.println("No items available to browse.");
-                return;
-            }
-
-            int totalPages = (availableItems.size() + PAGE_SIZE - 1) / PAGE_SIZE;
-            currentPage = Math.min(currentPage, totalPages - 1);
-            int startIndex = currentPage * PAGE_SIZE;
-            int endIndex = Math.min(startIndex + PAGE_SIZE, availableItems.size());
-            List<Item> pageItems = availableItems.subList(startIndex, endIndex);
-
             System.out.println("\n=== Listings (page "
-                    + (currentPage + 1) + " of " + totalPages + ") ===");
-            for (int i = 0; i < pageItems.size(); i++) {
-                printItem(i + 1, pageItems.get(i), false);
+                    + currentPage + " of " + pageCount(totalItems) + ") ===");
+            for (int i = 0; i < availableItems.size(); i++) {
+                printItem(i + 1, availableItems.get(i), false);
             }
 
             int nextOption = -1;
             int previousOption = -1;
-            int menuOption = pageItems.size() + 1;
-            if (currentPage < totalPages - 1) {
+            int menuOption = availableItems.size() + 1;
+            if (currentPage < pageCount(totalItems)) {
                 nextOption = menuOption++;
                 System.out.println(nextOption + ") Next page");
             }
-            if (currentPage > 0) {
+            if (currentPage > 1) {
                 previousOption = menuOption++;
                 System.out.println(previousOption + ") Previous page");
             }
@@ -277,8 +317,8 @@ public class CliHandler {
                 currentPage++;
             } else if (previousOption != -1 && selection == previousOption) {
                 currentPage--;
-            } else if (selection >= 1 && selection <= pageItems.size()) {
-                showDetailedView(pageItems.get(selection - 1));
+            } else if (selection >= 1 && selection <= availableItems.size()) {
+                showDetailedView(availableItems.get(selection - 1));
                 if (endOfInput) {
                     return;
                 }
@@ -293,15 +333,146 @@ public class CliHandler {
         System.out.println("Name: " + item.name());
         System.out.println("Description: " + item.description());
         System.out.println("Cost per day: " + formatCost(item.costPerDay()));
-        System.out.println("Owner ID: " + item.ownerId());
+        System.out.println("Owner: " + userService.usernameForId(item.ownerId()));
         System.out.println("Status: " + item.status());
-        readLine("Press Enter to return to listings: ");
+        System.out.println("1) Rent this item");
+        System.out.println("2) Back to listings");
+        String choice = readLine("> ");
+        if (choice == null) {
+            return;
+        }
+        if (choice.trim().equals("1")) {
+            String daysInput = readLine("Number of days: ");
+            if (daysInput == null) {
+                return;
+            }
+            try {
+                int days = Integer.parseInt(daysInput.trim());
+                runServiceAction(() -> {
+                    rentalService.rentItem(
+                            currentUser.id(), item.id(), days);
+                    System.out.println("Item rented successfully.");
+                });
+            } catch (NumberFormatException exception) {
+                System.out.println("Enter a valid number of days.");
+            }
+        } else if (!choice.trim().equals("2")) {
+            System.out.println("Invalid option.");
+        }
+    }
+
+    private void handleConfirmReturns() {
+        int page = 1;
+        while (true) {
+            final List<Item> rentedItems;
+            final long totalItems;
+            try {
+                totalItems =
+                        itemService.countRentedInventory(currentUser.id());
+                if (totalItems == 0) {
+                    System.out.println("You have no items awaiting return.");
+                    return;
+                }
+                page = Math.min(page, pageCount(totalItems));
+                rentedItems =
+                        itemService.viewRentedInventory(currentUser.id(), page);
+            } catch (RuntimeException exception) {
+                reportServiceError(exception);
+                return;
+            }
+
+            System.out.println("\n=== Items Awaiting Return (page "
+                    + page + " of " + pageCount(totalItems) + ") ===");
+            for (int i = 0; i < rentedItems.size(); i++) {
+                printItem(i + 1, rentedItems.get(i), true);
+            }
+
+            int nextOption = -1;
+            int previousOption = -1;
+            int menuOption = rentedItems.size() + 1;
+            if (page < pageCount(totalItems)) {
+                nextOption = menuOption++;
+                System.out.println(nextOption + ") Next page");
+            }
+            if (page > 1) {
+                previousOption = menuOption++;
+                System.out.println(previousOption + ") Previous page");
+            }
+            System.out.println(menuOption + ") Back to menu");
+
+            String input = readLine("> ");
+            if (input == null) {
+                return;
+            }
+            Integer choice = parseSelection(input);
+            if (choice == null) {
+                continue;
+            }
+            if (choice == menuOption) {
+                return;
+            }
+            if (nextOption != -1 && choice == nextOption) {
+                page++;
+            } else if (previousOption != -1 && choice == previousOption) {
+                page--;
+            } else if (choice >= 1 && choice <= rentedItems.size()) {
+                showReturnDetails(rentedItems.get(choice - 1));
+                if (endOfInput) {
+                    return;
+                }
+            } else {
+                System.out.println("Invalid selection.");
+            }
+        }
+    }
+
+    private void showReturnDetails(Item item) {
+        final Rental rental;
+        try {
+            rental = rentalService.getActiveRentalForOwner(
+                    currentUser.id(), item.id());
+        } catch (RuntimeException exception) {
+            reportServiceError(exception);
+            return;
+        }
+
+        DateTimeFormatter dateTimeFormat =
+                DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss", Locale.ROOT);
+        LocalDateTime expectedReturn = rental.rentedAt().plusDays(rental.days());
+
+        System.out.println("\n=== Return details ===");
+        System.out.println("Item: " + item.name());
+        System.out.println("Renter: " + userService.usernameForId(rental.renterId()));
+        System.out.println("Rental started: " + rental.rentedAt().format(dateTimeFormat));
+        System.out.println("Expected return: " + expectedReturn.format(dateTimeFormat));
+        System.out.println("1) Confirm return");
+        System.out.println("2) Back");
+
+        String choice = readLine("> ");
+        if (choice == null) {
+            return;
+        }
+        if (choice.trim().equals("1")) {
+            runServiceAction(() -> {
+                rentalService.confirmReturn(currentUser.id(), item.id());
+                System.out.println("Return confirmed.");
+            });
+        } else if (!choice.trim().equals("2")) {
+            System.out.println("Invalid option.");
+        }
+    }
+
+    private int pageCount(long itemCount) {
+        return (int) ((itemCount + PAGE_SIZE - 1) / PAGE_SIZE);
     }
 
     private void printItem(int index, Item item, boolean includeStatus) {
         String line = String.format(
-                Locale.ROOT, "%d) %s | %.2f/day | owner #%d",
-                index, item.name(), item.costPerDay(), item.ownerId());
+                Locale.ROOT, "%d) %s | %.2f/day | owner %s",
+                index,
+                item.name(),
+                item.costPerDay(),
+                userService.usernameForId(item.ownerId()));
         if (includeStatus) {
             line += " [" + item.status() + "]";
         }

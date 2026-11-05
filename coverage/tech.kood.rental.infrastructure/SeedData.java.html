@@ -1,0 +1,147 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>SeedData.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">multi-user-rental-tracker</a> &gt; <a href="index.source.html" class="el_package">tech.kood.rental.infrastructure</a> &gt; <span class="el_source">SeedData.java</span></div><h1>SeedData.java</h1><pre class="source lang-java linenums"><span class="fc" id="L1">package tech.kood.rental.infrastructure;</span>
+
+import tech.kood.rental.domain.ItemStatus;
+import tech.kood.rental.security.PasswordHasher;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
+import java.sql.Statement;
+import java.util.List;
+
+/**
+ * Builds data/app.db: the schema, four demo users, nine items and one active rental.
+ * Run it once from the IDE (the green arrow next to main), then commit the file it makes.
+ * Running it again REPLACES the old file, so it is only for making the demo database.
+ */
+public final class SeedData {
+
+    // Demo-only password for all four demo users. The database stores only its bcrypt hash.
+    static final String DEMO_PASSWORD = &quot;password123&quot;;
+
+    // The demo users. Their ids are 1 to 4, in this order
+<span class="fc" id="L29">    static final List&lt;String&gt; USERNAMES = List.of(&quot;siim&quot;, &quot;meelis&quot;, &quot;liisa&quot;, &quot;marili&quot;);</span>
+
+    // One item to be lent out
+    private record SeedItem(int ownerId, String name, String description,
+                            double costPerDay, ItemStatus status) {
+    }
+
+    // The demo items. Their ids are 1 to 9, in this order. The owner is a position in USERNAMES
+<span class="fc" id="L37">    private static final List&lt;SeedItem&gt; ITEMS = List.of(</span>
+<span class="fc" id="L38">            new SeedItem(2, &quot;Pressure washer&quot;, &quot;Electric, 1800 psi&quot;, 8, ItemStatus.AVAILABLE),</span>
+<span class="fc" id="L39">            new SeedItem(3, &quot;Tent (4-person)&quot;, &quot;Waterproof, easy to set up&quot;, 6, ItemStatus.AVAILABLE),</span>
+<span class="fc" id="L40">            new SeedItem(2, &quot;Circular saw&quot;, &quot;Corded, 190 mm blade&quot;, 5, ItemStatus.AVAILABLE),</span>
+<span class="fc" id="L41">            new SeedItem(4, &quot;Ladder&quot;, &quot;Aluminium, 3 metres&quot;, 5, ItemStatus.AVAILABLE),</span>
+<span class="fc" id="L42">            new SeedItem(1, &quot;Drill&quot;, &quot;Cordless, two batteries&quot;, 4, ItemStatus.AVAILABLE),</span>
+<span class="fc" id="L43">            new SeedItem(3, &quot;Wheelbarrow&quot;, &quot;Steel tray, pneumatic tyre&quot;, 3, ItemStatus.AVAILABLE),</span>
+<span class="fc" id="L44">            new SeedItem(4, &quot;Hedge trimmer&quot;, &quot;Electric, 60 cm blade&quot;, 6, ItemStatus.AVAILABLE),</span>
+<span class="fc" id="L45">            new SeedItem(1, &quot;Tile cutter&quot;, &quot;Manual, cuts up to 60 cm&quot;, 4, ItemStatus.RENTED),</span>
+<span class="fc" id="L46">            new SeedItem(1, &quot;Paint sprayer&quot;, &quot;Airless, for walls and fences&quot;, 7, ItemStatus.UNLISTED));</span>
+
+    private SeedData() {
+        // utility class: nobody should create one
+    }
+
+    // Run from the IDE with no arguments, this writes data/app.db in the project folder
+    public static void main(String[] args) throws Exception {
+<span class="nc bnc" id="L54" title="All 2 branches missed.">        Path file = Path.of(args.length &gt; 0 ? args[0] : &quot;data/app.db&quot;);</span>
+<span class="nc" id="L55">        build(file);</span>
+<span class="nc" id="L56">        System.out.println(&quot;Seeded database written to &quot; + file.toAbsolutePath());</span>
+<span class="nc" id="L57">    }</span>
+
+    // Builds a fresh database at the given path, replacing any file that is already there
+    public static void build(Path file) throws SQLException, IOException {
+<span class="fc" id="L61">        Path absolute = file.toAbsolutePath();</span>
+<span class="fc" id="L62">        Files.createDirectories(absolute.getParent());</span>
+<span class="fc" id="L63">        Files.deleteIfExists(absolute);</span>
+
+        
+<span class="fc" id="L66">        String url = &quot;jdbc:sqlite:&quot; + absolute.toString().replace('\\', '/');</span>
+<span class="fc" id="L67">        try (Connection connection = DriverManager.getConnection(url)) {</span>
+            // SQLite ignores foreign keys unless every connection switches them on
+<span class="fc" id="L69">            run(connection, &quot;PRAGMA foreign_keys = ON&quot;);</span>
+<span class="fc" id="L70">            loadSchema(connection);</span>
+<span class="fc" id="L71">            insertUsers(connection);</span>
+<span class="fc" id="L72">            insertItems(connection);</span>
+<span class="fc" id="L73">            insertRental(connection);</span>
+        }
+<span class="fc" id="L75">    }</span>
+
+    // ---------- the steps ----------
+
+    private static void insertUsers(Connection connection) throws SQLException {
+<span class="fc" id="L80">        PasswordHasher hasher = new PasswordHasher();</span>
+<span class="fc" id="L81">        String sql = &quot;INSERT INTO users (id, username, password) VALUES (?, ?, ?)&quot;;</span>
+
+<span class="fc" id="L83">        try (PreparedStatement insert = connection.prepareStatement(sql)) {</span>
+<span class="fc bfc" id="L84" title="All 2 branches covered.">            for (int i = 0; i &lt; USERNAMES.size(); i++) {</span>
+<span class="fc" id="L85">                insert.setInt(1, i + 1);</span>
+<span class="fc" id="L86">                insert.setString(2, USERNAMES.get(i));</span>
+<span class="fc" id="L87">                insert.setString(3, hasher.hash(DEMO_PASSWORD));   // the hash, never the plain password</span>
+<span class="fc" id="L88">                insert.executeUpdate();</span>
+            }
+        }
+<span class="fc" id="L91">    }</span>
+
+    private static void insertItems(Connection connection) throws SQLException {
+<span class="fc" id="L94">        String sql = &quot;INSERT INTO items (id, owner_id, name, description, cost_per_day, status) &quot;</span>
+                + &quot;VALUES (?, ?, ?, ?, ?, ?)&quot;;
+
+<span class="fc" id="L97">        try (PreparedStatement insert = connection.prepareStatement(sql)) {</span>
+<span class="fc bfc" id="L98" title="All 2 branches covered.">            for (int i = 0; i &lt; ITEMS.size(); i++) {</span>
+<span class="fc" id="L99">                SeedItem item = ITEMS.get(i);</span>
+<span class="fc" id="L100">                insert.setInt(1, i + 1);</span>
+<span class="fc" id="L101">                insert.setInt(2, item.ownerId());</span>
+<span class="fc" id="L102">                insert.setString(3, item.name());</span>
+<span class="fc" id="L103">                insert.setString(4, item.description());</span>
+<span class="fc" id="L104">                insert.setDouble(5, item.costPerDay());</span>
+<span class="fc" id="L105">                insert.setString(6, item.status().name());</span>
+<span class="fc" id="L106">                insert.executeUpdate();</span>
+            }
+        }
+<span class="fc" id="L109">    }</span>
+
+    // meelis (user 2) is renting siim's tile cutter (item 8) for 3 days, so siim can confirm the return
+    private static void insertRental(Connection connection) throws SQLException {
+<span class="fc" id="L113">        run(connection, &quot;INSERT INTO rentals (id, item_id, renter_id, days) VALUES (1, 8, 2, 3)&quot;);</span>
+<span class="fc" id="L114">    }</span>
+
+    // ---------- helpers ----------
+
+    // Runs one SQL statement
+    private static void run(Connection connection, String sql) throws SQLException {
+<span class="fc" id="L120">        try (Statement statement = connection.createStatement()) {</span>
+<span class="fc" id="L121">            statement.execute(sql);</span>
+        }
+<span class="fc" id="L123">    }</span>
+
+    // Reads schema.sql from inside the application and runs each statement in it
+    private static void loadSchema(Connection connection) throws SQLException, IOException {
+<span class="fc" id="L127">        try (InputStream input = SeedData.class.getResourceAsStream(&quot;/schema.sql&quot;)) {</span>
+<span class="pc bpc" id="L128" title="1 of 2 branches missed.">            if (input == null) {</span>
+<span class="nc" id="L129">                throw new IOException(&quot;schema.sql was not found&quot;);</span>
+            }
+<span class="fc" id="L131">            String schema = new String(input.readAllBytes(), StandardCharsets.UTF_8);</span>
+
+            // drop the &quot;--&quot; comments first, so a semicolon inside a comment cannot cut a statement
+<span class="fc" id="L134">            StringBuilder cleaned = new StringBuilder();</span>
+<span class="fc bfc" id="L135" title="All 2 branches covered.">            for (String line : schema.split(&quot;\\R&quot;)) {</span>
+<span class="fc" id="L136">                int comment = line.indexOf(&quot;--&quot;);</span>
+<span class="fc bfc" id="L137" title="All 2 branches covered.">                cleaned.append(comment &gt;= 0 ? line.substring(0, comment) : line).append('\n');</span>
+            }
+<span class="fc bfc" id="L139" title="All 2 branches covered.">            for (String part : cleaned.toString().split(&quot;;&quot;)) {</span>
+<span class="fc bfc" id="L140" title="All 2 branches covered.">                if (!part.isBlank()) {</span>
+<span class="fc" id="L141">                    run(connection, part.trim());</span>
+                }
+            }
+        }
+<span class="fc" id="L145">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.14.202510111229</span></div></body></html>

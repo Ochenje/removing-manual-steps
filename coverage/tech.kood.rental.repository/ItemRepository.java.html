@@ -1,0 +1,231 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ItemRepository.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">multi-user-rental-tracker</a> &gt; <a href="index.source.html" class="el_package">tech.kood.rental.repository</a> &gt; <span class="el_source">ItemRepository.java</span></div><h1>ItemRepository.java</h1><pre class="source lang-java linenums">
+package tech.kood.rental.repository;
+
+import tech.kood.rental.domain.Item;
+import tech.kood.rental.domain.ItemStatus;
+import tech.kood.rental.infrastructure.DatabaseConnection;
+import tech.kood.rental.repository.exception.DatabaseException;
+
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
+
+/**
+ * Handles all database operations involving items.
+ * Ownership and rental rules are enforced by the service layer.
+ */
+public class ItemRepository {
+
+    private static final String COLUMNS =
+            &quot;id, owner_id, name, description, cost_per_day, status&quot;;
+
+    private final DatabaseConnection database;
+
+<span class="fc" id="L29">    public ItemRepository(DatabaseConnection database) {</span>
+<span class="fc" id="L30">        this.database = database;</span>
+<span class="fc" id="L31">    }</span>
+
+    public Item insert(Item item) {
+<span class="fc" id="L34">        String sql = &quot;INSERT INTO items &quot;</span>
+                + &quot;(owner_id, name, description, cost_per_day, status) &quot;
+                + &quot;VALUES (?, ?, ?, ?, ?)&quot;;
+
+<span class="fc" id="L38">        try (Connection connection = database.getConnection();</span>
+<span class="fc" id="L39">             PreparedStatement statement =</span>
+<span class="fc" id="L40">                     connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {</span>
+
+<span class="fc" id="L42">            statement.setLong(1, item.ownerId());</span>
+<span class="fc" id="L43">            statement.setString(2, item.name());</span>
+<span class="fc" id="L44">            statement.setString(3, item.description());</span>
+<span class="fc" id="L45">            statement.setDouble(4, item.costPerDay());</span>
+<span class="fc" id="L46">            statement.setString(5, item.status().name());</span>
+
+<span class="fc" id="L48">            statement.executeUpdate();</span>
+
+<span class="fc" id="L50">            try (ResultSet keys = statement.getGeneratedKeys()) {</span>
+<span class="pc bpc" id="L51" title="1 of 2 branches missed.">                if (!keys.next()) {</span>
+<span class="nc" id="L52">                    throw new SQLException(&quot;The inserted item ID could not be retrieved.&quot;);</span>
+                }
+
+<span class="fc" id="L55">                Item saved = readById(connection, keys.getLong(1));</span>
+
+<span class="pc bpc" id="L57" title="1 of 2 branches missed.">                if (saved == null) {</span>
+<span class="nc" id="L58">                    throw new SQLException(&quot;The inserted item could not be read back.&quot;);</span>
+                }
+
+<span class="fc" id="L61">                return saved;</span>
+            }
+
+<span class="fc" id="L64">        } catch (SQLException e) {</span>
+<span class="fc" id="L65">            throw new DatabaseException(&quot;insert item&quot;, e);</span>
+        }
+    }
+
+    public Optional&lt;Item&gt; findById(long id) {
+<span class="fc" id="L70">        try (Connection connection = database.getConnection()) {</span>
+<span class="fc" id="L71">            return Optional.ofNullable(readById(connection, id));</span>
+<span class="fc" id="L72">        } catch (SQLException e) {</span>
+<span class="fc" id="L73">            throw new DatabaseException(&quot;find item by id&quot;, e);</span>
+        }
+    }
+
+    /**
+     * Finds an item using a connection supplied by the service.
+     * The caller is responsible for managing the connection.
+     */
+    public Optional&lt;Item&gt; findById(Connection connection, long id)
+            throws SQLException {
+<span class="fc" id="L83">        return Optional.ofNullable(readById(connection, id));</span>
+    }
+
+    public List&lt;Item&gt; listAvailableNotOwnedBy(
+            long userId, int limit, int offset) {
+
+<span class="fc" id="L89">        String sql = &quot;SELECT &quot; + COLUMNS + &quot; FROM items &quot;</span>
+                + &quot;WHERE status = 'AVAILABLE' AND owner_id &lt;&gt; ? &quot;
+                + &quot;ORDER BY cost_per_day DESC, name, id LIMIT ? OFFSET ?&quot;;
+
+<span class="fc" id="L93">        return list(&quot;list available items&quot;, sql, userId, limit, offset);</span>
+    }
+
+    public long countAvailableNotOwnedBy(long userId) {
+<span class="fc" id="L97">        return count(</span>
+<span class="fc" id="L98">                &quot;count available items&quot;,</span>
+<span class="fc" id="L99">                &quot;SELECT COUNT(*) FROM items &quot;</span>
+                        + &quot;WHERE status = 'AVAILABLE' AND owner_id &lt;&gt; ?&quot;,
+<span class="fc" id="L101">                userId);</span>
+    }
+
+    public List&lt;Item&gt; listByOwner(long ownerId, int limit, int offset) {
+<span class="fc" id="L105">        String sql = &quot;SELECT &quot; + COLUMNS + &quot; FROM items &quot;</span>
+                + &quot;WHERE owner_id = ? ORDER BY id LIMIT ? OFFSET ?&quot;;
+
+<span class="fc" id="L108">        return list(&quot;list items by owner&quot;, sql, ownerId, limit, offset);</span>
+    }
+
+    public long countByOwner(long ownerId) {
+<span class="fc" id="L112">        return count(</span>
+<span class="fc" id="L113">                &quot;count items by owner&quot;,</span>
+<span class="fc" id="L114">                &quot;SELECT COUNT(*) FROM items WHERE owner_id = ?&quot;,</span>
+<span class="fc" id="L115">                ownerId);</span>
+    }
+
+    public List&lt;Item&gt; listRentedByOwner(long ownerId, int limit, int offset) {
+<span class="fc" id="L119">        String sql = &quot;SELECT &quot; + COLUMNS + &quot; FROM items &quot;</span>
+                + &quot;WHERE owner_id = ? AND status = 'RENTED' &quot;
+                + &quot;ORDER BY id LIMIT ? OFFSET ?&quot;;
+
+<span class="fc" id="L123">        return list(&quot;list rented items by owner&quot;, sql, ownerId, limit, offset);</span>
+    }
+
+    public long countRentedByOwner(long ownerId) {
+<span class="fc" id="L127">        return count(</span>
+<span class="fc" id="L128">                &quot;count rented items by owner&quot;,</span>
+<span class="fc" id="L129">                &quot;SELECT COUNT(*) FROM items &quot;</span>
+                        + &quot;WHERE owner_id = ? AND status = 'RENTED'&quot;,
+<span class="fc" id="L131">                ownerId);</span>
+    }
+
+    public boolean changeStatus(
+            long id, ItemStatus expected, ItemStatus next) {
+
+<span class="fc" id="L137">        try (Connection connection = database.getConnection()) {</span>
+<span class="fc" id="L138">            return changeStatus(connection, id, expected, next);</span>
+<span class="fc" id="L139">        } catch (SQLException e) {</span>
+<span class="fc" id="L140">            throw new DatabaseException(&quot;change item status&quot;, e);</span>
+        }
+    }
+
+    /**
+     * Changes an item's status using a connection supplied by the service.
+     * The update succeeds only when the current status matches the expected status.
+     */
+    public boolean changeStatus(
+            Connection connection,
+            long id,
+            ItemStatus expected,
+            ItemStatus next
+    ) throws SQLException {
+
+<span class="fc" id="L155">        String sql = &quot;UPDATE items SET status = ? WHERE id = ? AND status = ?&quot;;</span>
+
+<span class="fc" id="L157">        try (PreparedStatement statement = connection.prepareStatement(sql)) {</span>
+<span class="fc" id="L158">            statement.setString(1, next.name());</span>
+<span class="fc" id="L159">            statement.setLong(2, id);</span>
+<span class="fc" id="L160">            statement.setString(3, expected.name());</span>
+
+<span class="fc bfc" id="L162" title="All 2 branches covered.">            return statement.executeUpdate() &gt; 0;</span>
+        }
+    }
+
+    private long count(String operation, String sql, long ownerId) {
+<span class="fc" id="L167">        try (Connection connection = database.getConnection();</span>
+<span class="fc" id="L168">             PreparedStatement statement = connection.prepareStatement(sql)) {</span>
+<span class="fc" id="L169">            statement.setLong(1, ownerId);</span>
+<span class="fc" id="L170">            try (ResultSet row = statement.executeQuery()) {</span>
+<span class="pc bpc" id="L171" title="1 of 2 branches missed.">                if (!row.next()) {</span>
+<span class="nc" id="L172">                    throw new SQLException(&quot;The count could not be retrieved.&quot;);</span>
+                }
+<span class="fc" id="L174">                return row.getLong(1);</span>
+            }
+<span class="nc" id="L176">        } catch (SQLException e) {</span>
+<span class="nc" id="L177">            throw new DatabaseException(operation, e);</span>
+        }
+    }
+
+    private List&lt;Item&gt; list(
+            String operation, String sql, long id, int limit, int offset) {
+
+<span class="fc" id="L184">        try (Connection connection = database.getConnection();</span>
+<span class="fc" id="L185">             PreparedStatement statement = connection.prepareStatement(sql)) {</span>
+
+<span class="fc" id="L187">            statement.setLong(1, id);</span>
+<span class="fc" id="L188">            statement.setInt(2, limit);</span>
+<span class="fc" id="L189">            statement.setInt(3, offset);</span>
+
+<span class="fc" id="L191">            try (ResultSet rows = statement.executeQuery()) {</span>
+<span class="fc" id="L192">                List&lt;Item&gt; items = new ArrayList&lt;&gt;();</span>
+
+<span class="fc bfc" id="L194" title="All 2 branches covered.">                while (rows.next()) {</span>
+<span class="fc" id="L195">                    items.add(map(rows));</span>
+                }
+
+<span class="fc" id="L198">                return items;</span>
+            }
+
+<span class="fc" id="L201">        } catch (SQLException e) {</span>
+<span class="fc" id="L202">            throw new DatabaseException(operation, e);</span>
+        }
+    }
+
+    private Item readById(Connection connection, long id)
+            throws SQLException {
+
+<span class="fc" id="L209">        String sql = &quot;SELECT &quot; + COLUMNS + &quot; FROM items WHERE id = ?&quot;;</span>
+
+<span class="fc" id="L211">        try (PreparedStatement statement = connection.prepareStatement(sql)) {</span>
+<span class="fc" id="L212">            statement.setLong(1, id);</span>
+
+<span class="fc" id="L214">            try (ResultSet row = statement.executeQuery()) {</span>
+<span class="fc bfc" id="L215" title="All 2 branches covered.">                return row.next() ? map(row) : null;</span>
+            }
+        }
+    }
+
+    private Item map(ResultSet row) throws SQLException {
+<span class="fc" id="L221">        return new Item(</span>
+<span class="fc" id="L222">                row.getLong(&quot;id&quot;),</span>
+<span class="fc" id="L223">                row.getLong(&quot;owner_id&quot;),</span>
+<span class="fc" id="L224">                row.getString(&quot;name&quot;),</span>
+<span class="fc" id="L225">                row.getString(&quot;description&quot;),</span>
+<span class="fc" id="L226">                row.getDouble(&quot;cost_per_day&quot;),</span>
+<span class="fc" id="L227">                ItemStatus.valueOf(row.getString(&quot;status&quot;))</span>
+        );
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.14.202510111229</span></div></body></html>

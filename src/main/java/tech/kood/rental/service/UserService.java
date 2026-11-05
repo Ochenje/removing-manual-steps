@@ -2,6 +2,7 @@
 package tech.kood.rental.service;
 
 import tech.kood.rental.domain.User;
+import tech.kood.rental.domain.UserValidator;
 import tech.kood.rental.domain.ValidationException;
 import tech.kood.rental.infrastructure.StructuredLogger;
 import tech.kood.rental.repository.UserRepository;
@@ -41,10 +42,9 @@ public final class UserService {
         StructuredLogger.info("user.registration.started");
 
         try {
-            String normalizedUsername = normalizeUsername(username);
-
-            validateUsername(normalizedUsername);
-            validatePassword(password);
+            String normalizedUsername =
+                    UserValidator.normalizeUsername(username);
+            UserValidator.validateRegistration(normalizedUsername, password);
 
             if (userRepository.existsByUsername(normalizedUsername)) {
                 reject(
@@ -70,6 +70,7 @@ public final class UserService {
             return savedUser.id();
 
         } catch (ValidationException exception) {
+            logValidationRejection(exception);
             throw exception;
 
         } catch (DuplicateUsernameException exception) {
@@ -99,10 +100,10 @@ public final class UserService {
         StructuredLogger.info("user.login.started");
 
         try {
-            String normalizedUsername = normalizeUsername(username);
-
-            validateUsername(normalizedUsername);
-            validatePassword(password);
+            String normalizedUsername =
+                    UserValidator.normalizeUsername(username);
+            UserValidator.validateLogin(normalizedUsername, password);
+            UserValidator.validateUsername(normalizedUsername);
 
             Optional<User> result =
                     userRepository.findByUsername(normalizedUsername);
@@ -126,6 +127,7 @@ public final class UserService {
                     user.username());
 
         } catch (ValidationException exception) {
+            logValidationRejection(exception);
             throw exception;
 
         } catch (RuntimeException exception) {
@@ -135,46 +137,34 @@ public final class UserService {
         }
     }
 
-    private String normalizeUsername(String username) {
-        if (username == null) {
+    public String usernameForId(long userId) {
+        if (userId <= 0) {
             reject(
-                    "username",
-                    "REQUIRED",
-                    "Username is required.");
+                    "id",
+                    "INVALID_ID",
+                    "A valid user ID is required.");
         }
 
-        return username.trim();
-    }
-
-    private void validateUsername(String username) {
-        if (username.isBlank()) {
-            reject(
-                    "username",
-                    "REQUIRED",
-                    "Username is required.");
-        }
-
-        if (username.length() < 3 || username.length() > 30) {
-            reject(
-                    "username",
-                    "INVALID_LENGTH",
-                    "Username must be between 3 and 30 characters.");
-        }
-
-        if (!username.matches("[A-Za-z0-9_]+")) {
-            reject(
-                    "username",
-                    "INVALID_FORMAT",
-                    "Username can only contain letters, numbers, and underscores.");
-        }
-    }
-
-    private void validatePassword(String password) {
-        if (password == null || password.isBlank()) {
-            reject(
-                    "password",
-                    "REQUIRED",
-                    "Password is required.");
+        try {
+            Optional<User> result = userRepository.findById(userId);
+            if (result == null) {
+                throw new IllegalStateException(
+                        "User repository returned an invalid result.");
+            }
+            if (result.isEmpty()) {
+                reject(
+                        "id",
+                        "NOT_FOUND",
+                        "Owner information could not be found.");
+            }
+            return result.get().username();
+        } catch (ValidationException exception) {
+            throw exception;
+        } catch (RuntimeException exception) {
+            StructuredLogger.error(
+                    "user.lookup.failed | userId=" + userId,
+                    exception);
+            throw exception;
         }
     }
 
@@ -203,6 +193,12 @@ public final class UserService {
                 field,
                 reason,
                 message);
+    }
+
+    private void logValidationRejection(ValidationException exception) {
+        StructuredLogger.warn(
+                "user.validation.rejected | field=" + exception.getField()
+                        + " | reason=" + exception.getReason());
     }
 
     /**

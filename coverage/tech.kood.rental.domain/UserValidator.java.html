@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>UserValidator.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">multi-user-rental-tracker</a> &gt; <a href="index.source.html" class="el_package">tech.kood.rental.domain</a> &gt; <span class="el_source">UserValidator.java</span></div><h1>UserValidator.java</h1><pre class="source lang-java linenums">package tech.kood.rental.domain;
+
+import java.nio.charset.StandardCharsets;
+
+/**
+ * Checks User input before it reaches the service and the database.
+ * It throws a ValidationException with a readable message when a rule is broken.
+ * It never puts the password into a message, so nothing can leak into the log.
+ */
+public final class UserValidator {
+
+    // The limits live here, so changing a rule is a one-line edit
+    static final int USERNAME_MIN = 3;
+    static final int USERNAME_MAX = 30;
+    static final int PASSWORD_MIN = 8;
+    static final int PASSWORD_MAX_BYTES = 72;
+
+    private UserValidator() {
+        // utility class: nobody should create one
+    }
+
+    // The form of the username that gets stored: no padding spaces.
+    // The service calls this before saving, so &quot; bob &quot; is stored as &quot;bob&quot;.
+    public static String normalizeUsername(String username) {
+<span class="fc bfc" id="L25" title="All 2 branches covered.">        return username == null ? null : username.trim();</span>
+    }
+
+    // All the rules, used when someone registers
+    public static void validateRegistration(String username, String password) {
+<span class="fc" id="L30">        validateUsername(username);</span>
+
+        // Check for null or blank passwords before performing other checks
+<span class="fc" id="L33">        requirePassword(password);</span>
+
+<span class="fc bfc" id="L35" title="All 2 branches covered.">        if (password.length() &lt; PASSWORD_MIN) {</span>
+<span class="fc" id="L36">            throw new ValidationException(&quot;User&quot;, &quot;password&quot;, &quot;too_short&quot;,</span>
+<span class="fc" id="L37">                    &quot;password must be at least &quot; + PASSWORD_MIN + &quot; characters&quot;);</span>
+        }
+
+        // BCrypt supports a maximum of 72 UTF-8 bytes
+<span class="pc bpc" id="L41" title="1 of 2 branches missed.">        if (password.getBytes(StandardCharsets.UTF_8).length &gt; PASSWORD_MAX_BYTES) {</span>
+<span class="nc" id="L42">            throw new ValidationException(&quot;User&quot;, &quot;password&quot;, &quot;too_long&quot;,</span>
+<span class="nc" id="L43">                    &quot;password must not exceed &quot; + PASSWORD_MAX_BYTES + &quot; UTF-8 bytes&quot;);</span>
+        }
+<span class="fc" id="L45">    }</span>
+
+    // Only the blank checks, used at login so we don't reveal the password rules
+    public static void validateLogin(String username, String password) {
+<span class="fc" id="L49">        requireUsername(username);</span>
+<span class="fc" id="L50">        requirePassword(password);</span>
+<span class="fc" id="L51">    }</span>
+
+    public static void validateUsername(String username) {
+<span class="fc" id="L54">        requireUsername(username);</span>
+<span class="fc" id="L55">        validateUsernameRules(username);</span>
+<span class="fc" id="L56">    }</span>
+
+    private static void validateUsernameRules(String username) {
+<span class="fc" id="L59">        String normalized = normalizeUsername(username);</span>
+<span class="fc bfc" id="L60" title="All 2 branches covered.">        if (normalized.length() &lt; USERNAME_MIN) {</span>
+<span class="fc" id="L61">            throw new ValidationException(&quot;User&quot;, &quot;username&quot;, &quot;too_short&quot;,</span>
+<span class="fc" id="L62">                    &quot;username must be at least &quot; + USERNAME_MIN + &quot; characters&quot;);</span>
+        }
+<span class="fc bfc" id="L64" title="All 2 branches covered.">        if (normalized.length() &gt; USERNAME_MAX) {</span>
+<span class="fc" id="L65">            throw new ValidationException(&quot;User&quot;, &quot;username&quot;, &quot;too_long&quot;,</span>
+<span class="fc" id="L66">                    &quot;username must be at most &quot; + USERNAME_MAX + &quot; characters&quot;);</span>
+        }
+<span class="fc bfc" id="L68" title="All 2 branches covered.">        if (!normalized.matches(&quot;[A-Za-z0-9_]+&quot;)) {</span>
+<span class="fc" id="L69">            throw new ValidationException(&quot;User&quot;, &quot;username&quot;, &quot;invalid_format&quot;,</span>
+<span class="fc" id="L70">                    &quot;username can only contain letters, numbers, and underscores&quot;);</span>
+        }
+<span class="fc" id="L72">    }</span>
+
+    private static void requireUsername(String username) {
+<span class="fc bfc" id="L75" title="All 4 branches covered.">        if (username == null || username.isBlank()) {</span>
+<span class="fc" id="L76">            throw new ValidationException(&quot;User&quot;, &quot;username&quot;, &quot;blank&quot;,</span>
+<span class="fc" id="L77">                    &quot;username must not be empty&quot;);</span>
+        }
+<span class="fc" id="L79">    }</span>
+
+    private static void requirePassword(String password) {
+<span class="fc bfc" id="L82" title="All 4 branches covered.">        if (password == null || password.isBlank()) {</span>
+<span class="fc" id="L83">            throw new ValidationException(&quot;User&quot;, &quot;password&quot;, &quot;blank&quot;,</span>
+<span class="fc" id="L84">                    &quot;password must not be empty&quot;);</span>
+        }
+<span class="fc" id="L86">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.14.202510111229</span></div></body></html>

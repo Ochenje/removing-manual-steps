@@ -7,6 +7,8 @@ package tech.kood.rental.domain;
  */
 public final class RentalValidator {
 
+    private static final int MAX_DAYS = 365;
+
     private RentalValidator() {
         // utility class: nobody should create one
     }
@@ -24,6 +26,10 @@ public final class RentalValidator {
         if (days < 1) {
             throw new ValidationException("Rental", "days", "too_small",
                     "rental duration must be at least 1 day");
+        }
+        if (days > MAX_DAYS) {
+            throw new ValidationException("Rental", "days", "too_large",
+                    "rental duration must not exceed " + MAX_DAYS + " days");
         }
     }
 }

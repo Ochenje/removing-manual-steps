@@ -61,7 +61,7 @@ public class UserRepository {
             }
 
         } catch (SQLException e) {
-            // TODO (after StructuredLogger is merged): log the failure with the operation name
+            
             if (isDuplicateUsername(e)) {
                 throw new DuplicateUsernameException(e);
             }

@@ -9,7 +9,12 @@ import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.logging.Handler;
+import java.util.logging.Level;
+import java.util.logging.LogRecord;
+import java.util.logging.Logger;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -124,6 +129,44 @@ class DatabaseConnectionTest {
             first.close();
             second.close();
         }
+    }
+
+    @Test
+    void connectionOpenAndCloseAreLogged() throws Exception {
+        Logger logger = Logger.getLogger("tech.kood.rental");
+        boolean originalParentHandlers = logger.getUseParentHandlers();
+        Level originalLevel = logger.getLevel();
+        List<String> messages = new ArrayList<>();
+        Handler handler = new Handler() {
+            @Override
+            public void publish(LogRecord record) {
+                messages.add(record.getMessage());
+            }
+
+            @Override
+            public void flush() {
+            }
+
+            @Override
+            public void close() {
+            }
+        };
+        logger.addHandler(handler);
+        logger.setUseParentHandlers(false);
+        logger.setLevel(Level.ALL);
+
+        try {
+            newDatabase("lifecycle.db").getConnection().close();
+        } finally {
+            logger.removeHandler(handler);
+            logger.setUseParentHandlers(originalParentHandlers);
+            logger.setLevel(originalLevel);
+        }
+
+        assertTrue(messages.stream().anyMatch(
+                message -> message.contains("db.connection.opened")));
+        assertTrue(messages.stream().anyMatch(
+                message -> message.contains("db.connection.closed")));
     }
 
     // ---------- reading schema.sql ----------

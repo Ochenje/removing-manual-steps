@@ -2,11 +2,13 @@ package tech.kood.rental.service;
 
 import tech.kood.rental.domain.Item;
 import tech.kood.rental.domain.ItemStatus;
+import tech.kood.rental.domain.ItemValidator;
 import tech.kood.rental.domain.ValidationException;
 import tech.kood.rental.infrastructure.StructuredLogger;
 import tech.kood.rental.repository.ItemRepository;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 public final class ItemService {
@@ -41,15 +43,16 @@ public final class ItemService {
 
         try {
             validateUserId(authenticatedUserId);
-            validateRequired(name, "name");
-            validateRequired(description, "description");
-            validateCost(costPerDay);
+            String normalizedName = ItemValidator.normalize(name);
+            String normalizedDescription = ItemValidator.normalize(description);
+            ItemValidator.validate(
+                    normalizedName, normalizedDescription, costPerDay);
 
             Item item = new Item(
                     null,
                     authenticatedUserId,
-                    name.trim(),
-                    description.trim(),
+                    normalizedName,
+                    normalizedDescription,
                     costPerDay,
                     ItemStatus.AVAILABLE
             );
@@ -63,12 +66,17 @@ public final class ItemService {
             }
 
             StructuredLogger.info(
-                    "item.listed | item_id=" + saved.id()
-                            + " owner_id=" + authenticatedUserId);
+                    "item.listed",
+                    Map.of(
+                            "item_id", saved.id(),
+                            "owner_id", authenticatedUserId));
 
             return saved;
 
         } catch (ValidationException exception) {
+            StructuredLogger.warn(
+                    "item.validation.rejected | field=" + exception.getField()
+                            + " | reason=" + exception.getReason());
             throw exception;
         } catch (RuntimeException exception) {
             StructuredLogger.error(
@@ -133,6 +141,58 @@ public final class ItemService {
         }
     }
 
+    public long countMyInventory(long authenticatedUserId) {
+        validateUserId(authenticatedUserId);
+        return items.countByOwner(authenticatedUserId);
+    }
+
+    /**
+     * Returns the authenticated user's currently rented-out items.
+     */
+    public List<Item> viewRentedInventory(
+            long authenticatedUserId,
+            int page) {
+
+        StructuredLogger.info(
+                "inventory.rented.view.started | user_id=" + authenticatedUserId);
+
+        try {
+            validateUserId(authenticatedUserId);
+            int offset = validatePage(page);
+            List<Item> rented =
+                    items.listRentedByOwner(
+                            authenticatedUserId,
+                            PAGE_SIZE,
+                            offset);
+
+            if (rented == null) {
+                throw new IllegalStateException(
+                        "Rented inventory could not be retrieved.");
+            }
+
+            StructuredLogger.info(
+                    "inventory.rented.view.succeeded | user_id="
+                            + authenticatedUserId
+                            + " page=" + page
+                            + " item_count=" + rented.size());
+
+            return rented;
+        } catch (ValidationException exception) {
+            throw exception;
+        } catch (RuntimeException exception) {
+            StructuredLogger.error(
+                    "inventory.rented.view.failed | user_id="
+                            + authenticatedUserId,
+                    exception);
+            throw exception;
+        }
+    }
+
+    public long countRentedInventory(long authenticatedUserId) {
+        validateUserId(authenticatedUserId);
+        return items.countRentedByOwner(authenticatedUserId);
+    }
+
     /**
      * Shows available items belonging to other users.
      * Defaults to the first page.
@@ -186,6 +246,11 @@ public final class ItemService {
         }
     }
 
+    public long countAvailableItems(long authenticatedUserId) {
+        validateUserId(authenticatedUserId);
+        return items.countAvailableNotOwnedBy(authenticatedUserId);
+    }
+
     /**
      * Allows only the owner to delist an AVAILABLE item.
      */
@@ -229,8 +294,10 @@ public final class ItemService {
             Item saved = loadItem(itemId);
 
             StructuredLogger.info(
-                    "item.delisted | item_id=" + itemId
-                            + " owner_id=" + authenticatedUserId);
+                    "item.delisted",
+                    Map.of(
+                            "item_id", itemId,
+                            "owner_id", authenticatedUserId));
 
             return saved;
 
@@ -287,8 +354,10 @@ public final class ItemService {
             Item saved = loadItem(itemId);
 
             StructuredLogger.info(
-                    "item.relisted | item_id=" + itemId
-                            + " owner_id=" + authenticatedUserId);
+                    "item.relisted",
+                    Map.of(
+                            "item_id", itemId,
+                            "owner_id", authenticatedUserId));
 
             return saved;
 
@@ -393,26 +462,6 @@ public final class ItemService {
         }
 
         return (int) offset;
-    }
-
-    private void validateRequired(String value, String field) {
-
-        if (value == null || value.isBlank()) {
-            reject(
-                    field,
-                    "REQUIRED",
-                    field + " is required.");
-        }
-    }
-
-    private void validateCost(double costPerDay) {
-
-        if (!Double.isFinite(costPerDay) || costPerDay < 0) {
-            reject(
-                    "costPerDay",
-                    "INVALID_COST",
-                    "Daily cost must be a valid, non-negative amount.");
-        }
     }
 
     private void validateUserId(long userId) {

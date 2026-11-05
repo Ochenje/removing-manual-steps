@@ -7,6 +7,7 @@ import org.junit.jupiter.api.Test;
 
 import java.io.ByteArrayOutputStream;
 import java.nio.charset.StandardCharsets;
+import java.util.Map;
 import java.util.logging.Handler;
 import java.util.logging.Level;
 import java.util.logging.LogRecord;
@@ -170,6 +171,16 @@ class StructuredLoggerTest {
         );
 
         assertTrue(result.contains("FIRST/SECOND"));
+    }
+
+    @Test
+    void structuredFieldsKeepSeparatorsAndSanitizeValues() {
+        String result = capture(() -> StructuredLogger.info(
+                "rental.created",
+                Map.of("rental_id", 42, "note", "first|second")));
+
+        assertTrue(result.contains("| rental_id=42"));
+        assertTrue(result.contains("| note=first/second"));
     }
 
     @Test

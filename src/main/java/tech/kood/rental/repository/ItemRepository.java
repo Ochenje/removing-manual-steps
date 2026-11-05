@@ -93,11 +93,42 @@ public class ItemRepository {
         return list("list available items", sql, userId, limit, offset);
     }
 
+    public long countAvailableNotOwnedBy(long userId) {
+        return count(
+                "count available items",
+                "SELECT COUNT(*) FROM items "
+                        + "WHERE status = 'AVAILABLE' AND owner_id <> ?",
+                userId);
+    }
+
     public List<Item> listByOwner(long ownerId, int limit, int offset) {
         String sql = "SELECT " + COLUMNS + " FROM items "
                 + "WHERE owner_id = ? ORDER BY id LIMIT ? OFFSET ?";
 
         return list("list items by owner", sql, ownerId, limit, offset);
+    }
+
+    public long countByOwner(long ownerId) {
+        return count(
+                "count items by owner",
+                "SELECT COUNT(*) FROM items WHERE owner_id = ?",
+                ownerId);
+    }
+
+    public List<Item> listRentedByOwner(long ownerId, int limit, int offset) {
+        String sql = "SELECT " + COLUMNS + " FROM items "
+                + "WHERE owner_id = ? AND status = 'RENTED' "
+                + "ORDER BY id LIMIT ? OFFSET ?";
+
+        return list("list rented items by owner", sql, ownerId, limit, offset);
+    }
+
+    public long countRentedByOwner(long ownerId) {
+        return count(
+                "count rented items by owner",
+                "SELECT COUNT(*) FROM items "
+                        + "WHERE owner_id = ? AND status = 'RENTED'",
+                ownerId);
     }
 
     public boolean changeStatus(
@@ -129,6 +160,21 @@ public class ItemRepository {
             statement.setString(3, expected.name());
 
             return statement.executeUpdate() > 0;
+        }
+    }
+
+    private long count(String operation, String sql, long ownerId) {
+        try (Connection connection = database.getConnection();
+             PreparedStatement statement = connection.prepareStatement(sql)) {
+            statement.setLong(1, ownerId);
+            try (ResultSet row = statement.executeQuery()) {
+                if (!row.next()) {
+                    throw new SQLException("The count could not be retrieved.");
+                }
+                return row.getLong(1);
+            }
+        } catch (SQLException e) {
+            throw new DatabaseException(operation, e);
         }
     }
 

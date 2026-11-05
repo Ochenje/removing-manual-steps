@@ -27,18 +27,7 @@ public final class UserValidator {
 
     // All the rules, used when someone registers
     public static void validateRegistration(String username, String password) {
-        requireUsername(username);
-
-        // Measure the normalized name, because that is the one that will be stored
-        int length = normalizeUsername(username).length();
-        if (length < USERNAME_MIN) {
-            throw new ValidationException("User", "username", "too_short",
-                    "username must be at least " + USERNAME_MIN + " characters");
-        }
-        if (length > USERNAME_MAX) {
-            throw new ValidationException("User", "username", "too_long",
-                    "username must be at most " + USERNAME_MAX + " characters");
-        }
+        validateUsername(username);
 
         // Check for null or blank passwords before performing other checks
         requirePassword(password);
@@ -59,6 +48,27 @@ public final class UserValidator {
     public static void validateLogin(String username, String password) {
         requireUsername(username);
         requirePassword(password);
+    }
+
+    public static void validateUsername(String username) {
+        requireUsername(username);
+        validateUsernameRules(username);
+    }
+
+    private static void validateUsernameRules(String username) {
+        String normalized = normalizeUsername(username);
+        if (normalized.length() < USERNAME_MIN) {
+            throw new ValidationException("User", "username", "too_short",
+                    "username must be at least " + USERNAME_MIN + " characters");
+        }
+        if (normalized.length() > USERNAME_MAX) {
+            throw new ValidationException("User", "username", "too_long",
+                    "username must be at most " + USERNAME_MAX + " characters");
+        }
+        if (!normalized.matches("[A-Za-z0-9_]+")) {
+            throw new ValidationException("User", "username", "invalid_format",
+                    "username can only contain letters, numbers, and underscores");
+        }
     }
 
     private static void requireUsername(String username) {
