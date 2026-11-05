@@ -1,8 +1,9 @@
-
 package tech.kood.rental.service;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+
+import tech.kood.rental.domain.ValidationException;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -25,7 +26,7 @@ class RentalServiceTest {
     @Test
     void rejectsNullUsername() {
         assertThrows(
-                IllegalArgumentException.class,
+                ValidationException.class,
                 () -> service.validateUsername(null)
         );
     }
@@ -33,7 +34,7 @@ class RentalServiceTest {
     @Test
     void rejectsBlankUsername() {
         assertThrows(
-                IllegalArgumentException.class,
+                ValidationException.class,
                 () -> service.validateUsername("   ")
         );
     }
@@ -48,7 +49,7 @@ class RentalServiceTest {
     @Test
     void rejectsZeroRentalDuration() {
         assertThrows(
-                IllegalArgumentException.class,
+                ValidationException.class,
                 () -> service.validateRentalDuration(0)
         );
     }
@@ -56,7 +57,7 @@ class RentalServiceTest {
     @Test
     void rejectsNegativeRentalDuration() {
         assertThrows(
-                IllegalArgumentException.class,
+                ValidationException.class,
                 () -> service.validateRentalDuration(-1)
         );
     }
@@ -71,7 +72,7 @@ class RentalServiceTest {
     @Test
     void rejectsNegativeItemCost() {
         assertThrows(
-                IllegalArgumentException.class,
+                ValidationException.class,
                 () -> service.validateItemCost(-1)
         );
     }
@@ -79,7 +80,7 @@ class RentalServiceTest {
     @Test
     void rejectsInfiniteItemCost() {
         assertThrows(
-                IllegalArgumentException.class,
+                ValidationException.class,
                 () -> service.validateItemCost(
                         Double.POSITIVE_INFINITY
                 )
@@ -89,7 +90,7 @@ class RentalServiceTest {
     @Test
     void rejectsNaNItemCost() {
         assertThrows(
-                IllegalArgumentException.class,
+                ValidationException.class,
                 () -> service.validateItemCost(Double.NaN)
         );
     }
@@ -97,7 +98,7 @@ class RentalServiceTest {
     @Test
     void rejectsSelfRental() {
         assertThrows(
-                IllegalArgumentException.class,
+                ValidationException.class,
                 () -> service.validateNotSelfRental(1, 1)
         );
     }
@@ -112,7 +113,7 @@ class RentalServiceTest {
     @Test
     void rejectsManagingAnotherUsersItem() {
         assertThrows(
-                IllegalArgumentException.class,
+                ValidationException.class,
                 () -> service.validateOwnership(1, 2)
         );
     }
@@ -127,7 +128,7 @@ class RentalServiceTest {
     @Test
     void rejectsUnavailableItem() {
         assertThrows(
-                IllegalArgumentException.class,
+                ValidationException.class,
                 () -> service.validateItemAvailable(false)
         );
     }
@@ -142,7 +143,7 @@ class RentalServiceTest {
     @Test
     void rejectsDuplicateUsername() {
         assertThrows(
-                IllegalArgumentException.class,
+                ValidationException.class,
                 () -> service.validateUsernameAvailable(
                         "tabitha", true
                 )
@@ -161,10 +162,75 @@ class RentalServiceTest {
     @Test
     void rejectsBlankUsernameBeforeDuplicateCheck() {
         assertThrows(
-                IllegalArgumentException.class,
+                ValidationException.class,
                 () -> service.validateUsernameAvailable(
                         "   ", false
                 )
         );
     }
+    
+@Test
+void rejectsUsernameShorterThanThreeCharacters() {
+    assertThrows(
+            ValidationException.class,
+            () -> service.validateUsername("ab")
+    );
+}
+
+@Test
+void rejectsUsernameLongerThanThirtyCharacters() {
+    assertThrows(
+            ValidationException.class,
+            () -> service.validateUsername("a".repeat(31))
+    );
+}
+
+@Test
+void rejectsUsernameWithInvalidCharacters() {
+    assertThrows(
+            ValidationException.class,
+            () -> service.validateUsername("user@123")
+    );
+}
+
+@Test
+void rejectsRentalDurationGreaterThan365Days() {
+    assertThrows(
+            ValidationException.class,
+            () -> service.validateRentalDuration(366)
+    );
+}
+
+@Test
+void rejectsInvalidOwnerIdForSelfRental() {
+    assertThrows(
+            ValidationException.class,
+            () -> service.validateNotSelfRental(0, 2)
+    );
+}
+
+@Test
+void rejectsInvalidRenterIdForSelfRental() {
+    assertThrows(
+            ValidationException.class,
+            () -> service.validateNotSelfRental(1, 0)
+    );
+}
+
+@Test
+void rejectsInvalidOwnerIdForOwnership() {
+    assertThrows(
+            ValidationException.class,
+            () -> service.validateOwnership(0, 1)
+    );
+}
+
+@Test
+void rejectsInvalidCurrentUserIdForOwnership() {
+    assertThrows(
+            ValidationException.class,
+            () -> service.validateOwnership(1, 0)
+    );
+}
+
 }
