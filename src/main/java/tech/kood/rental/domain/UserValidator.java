@@ -1,5 +1,7 @@
 package tech.kood.rental.domain;
 
+import java.nio.charset.StandardCharsets;
+
 /**
  * Checks User input before it reaches the service and the database.
  * It throws a ValidationException with a readable message when a rule is broken.
@@ -11,6 +13,7 @@ public final class UserValidator {
     static final int USERNAME_MIN = 3;
     static final int USERNAME_MAX = 30;
     static final int PASSWORD_MIN = 8;
+    static final int PASSWORD_MAX_BYTES = 72;
 
     private UserValidator() {
         // utility class: nobody should create one
@@ -25,7 +28,8 @@ public final class UserValidator {
     // All the rules, used when someone registers
     public static void validateRegistration(String username, String password) {
         requireUsername(username);
-        // measure the normalized name, because that is the one that will be stored
+
+        // Measure the normalized name, because that is the one that will be stored
         int length = normalizeUsername(username).length();
         if (length < USERNAME_MIN) {
             throw new ValidationException("User", "username", "too_short",
@@ -36,10 +40,18 @@ public final class UserValidator {
                     "username must be at most " + USERNAME_MAX + " characters");
         }
 
+        // Check for null or blank passwords before performing other checks
         requirePassword(password);
+
         if (password.length() < PASSWORD_MIN) {
             throw new ValidationException("User", "password", "too_short",
                     "password must be at least " + PASSWORD_MIN + " characters");
+        }
+
+        // BCrypt supports a maximum of 72 UTF-8 bytes
+        if (password.getBytes(StandardCharsets.UTF_8).length > PASSWORD_MAX_BYTES) {
+            throw new ValidationException("User", "password", "too_long",
+                    "password must not exceed " + PASSWORD_MAX_BYTES + " UTF-8 bytes");
         }
     }
 
