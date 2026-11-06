@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>UserService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">multi-user-rental-tracker</a> &gt; <a href="index.source.html" class="el_package">tech.kood.rental.service</a> &gt; <span class="el_source">UserService.java</span></div><h1>UserService.java</h1><pre class="source lang-java linenums"><span class="fc" id="L1"></span>
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>UserService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">multi-user-rental-tracker</a> &gt; <a href="index.source.html" class="el_package">tech.kood.rental.service</a> &gt; <span class="el_source">UserService.java</span></div><h1>UserService.java</h1><pre class="source lang-java linenums">
 package tech.kood.rental.service;
 
 import tech.kood.rental.domain.User;
@@ -16,18 +16,18 @@ public final class UserService {
     private final UserRepository userRepository;
     private final PasswordHasher passwordHasher;
 
-<span class="fc" id="L19">    public UserService(</span>
+    public UserService(
             UserRepository userRepository,
-            PasswordHasher passwordHasher) {
+<span class="fc" id="L21">            PasswordHasher passwordHasher) {</span>
 
 <span class="fc bfc" id="L23" title="All 2 branches covered.">        if (userRepository == null) {</span>
 <span class="fc" id="L24">            throw new IllegalArgumentException(</span>
-<span class="fc" id="L25">                    &quot;UserRepository must not be null&quot;);</span>
+                    &quot;UserRepository must not be null&quot;);
         }
 
 <span class="fc bfc" id="L28" title="All 2 branches covered.">        if (passwordHasher == null) {</span>
 <span class="fc" id="L29">            throw new IllegalArgumentException(</span>
-<span class="fc" id="L30">                    &quot;PasswordHasher must not be null&quot;);</span>
+                    &quot;PasswordHasher must not be null&quot;);
         }
 
 <span class="fc" id="L33">        this.userRepository = userRepository;</span>
@@ -47,10 +47,10 @@ public final class UserService {
 <span class="fc" id="L47">            UserValidator.validateRegistration(normalizedUsername, password);</span>
 
 <span class="fc bfc" id="L49" title="All 2 branches covered.">            if (userRepository.existsByUsername(normalizedUsername)) {</span>
-<span class="pc" id="L50">                reject(</span>
-<span class="fc" id="L51">                        &quot;username&quot;,</span>
-<span class="fc" id="L52">                        &quot;DUPLICATE_USERNAME&quot;,</span>
-<span class="fc" id="L53">                        &quot;That username is already taken.&quot;);</span>
+<span class="nc" id="L50">                reject(</span>
+                        &quot;username&quot;,
+                        &quot;DUPLICATE_USERNAME&quot;,
+                        &quot;That username is already taken.&quot;);
             }
 
 <span class="fc" id="L56">            String passwordHash = passwordHasher.hash(password);</span>
@@ -60,11 +60,11 @@ public final class UserService {
 
 <span class="fc bfc" id="L61" title="All 4 branches covered.">            if (savedUser == null || savedUser.id() == null) {</span>
 <span class="fc" id="L62">                throw new IllegalStateException(</span>
-<span class="fc" id="L63">                        &quot;Repository did not return a saved user ID&quot;);</span>
+                        &quot;Repository did not return a saved user ID&quot;);
             }
 
 <span class="fc" id="L66">            StructuredLogger.info(</span>
-<span class="fc" id="L67">                    &quot;user.registration.succeeded | userId=&quot;</span>
+                    &quot;user.registration.succeeded | userId=&quot;
 <span class="fc" id="L68">                            + savedUser.id());</span>
 
 <span class="fc" id="L70">            return savedUser.id();</span>
@@ -75,17 +75,17 @@ public final class UserService {
 
 <span class="nc" id="L76">        } catch (DuplicateUsernameException exception) {</span>
 <span class="nc" id="L77">            StructuredLogger.warn(</span>
-<span class="nc" id="L78">                    &quot;user.validation.rejected | field=username | reason=DUPLICATE_USERNAME&quot;);</span>
+                    &quot;user.validation.rejected | field=username | reason=DUPLICATE_USERNAME&quot;);
 
 <span class="nc" id="L80">            throw new ValidationException(</span>
-<span class="nc" id="L81">                    &quot;USER&quot;,</span>
-<span class="nc" id="L82">                    &quot;username&quot;,</span>
-<span class="nc" id="L83">                    &quot;DUPLICATE_USERNAME&quot;,</span>
-<span class="nc" id="L84">                    &quot;That username is already taken.&quot;);</span>
+                    &quot;USER&quot;,
+                    &quot;username&quot;,
+                    &quot;DUPLICATE_USERNAME&quot;,
+                    &quot;That username is already taken.&quot;);
 
 <span class="fc" id="L86">        } catch (RuntimeException exception) {</span>
 <span class="fc" id="L87">            StructuredLogger.error(</span>
-<span class="fc" id="L88">                    &quot;user.registration.failed&quot;, exception);</span>
+                    &quot;user.registration.failed&quot;, exception);
 <span class="fc" id="L89">            throw exception;</span>
         }
     }
@@ -114,8 +114,8 @@ public final class UserService {
 
 <span class="fc" id="L115">            User user = result.get();</span>
 
-<span class="fc" id="L117">            if (!passwordHasher.verify(</span>
-<span class="fc bfc" id="L118" title="All 2 branches covered.">                    password, user.passwordHash())) {</span>
+<span class="fc bfc" id="L117" title="All 2 branches covered.">            if (!passwordHasher.verify(</span>
+<span class="fc" id="L118">                    password, user.passwordHash())) {</span>
 <span class="nc" id="L119">                rejectInvalidCredentials();</span>
             }
 
@@ -132,7 +132,7 @@ public final class UserService {
 
 <span class="fc" id="L133">        } catch (RuntimeException exception) {</span>
 <span class="fc" id="L134">            StructuredLogger.error(</span>
-<span class="fc" id="L135">                    &quot;user.login.failed&quot;, exception);</span>
+                    &quot;user.login.failed&quot;, exception);
 <span class="fc" id="L136">            throw exception;</span>
         }
     }
@@ -140,43 +140,43 @@ public final class UserService {
     public String usernameForId(long userId) {
 <span class="pc bpc" id="L141" title="1 of 2 branches missed.">        if (userId &lt;= 0) {</span>
 <span class="nc" id="L142">            reject(</span>
-<span class="nc" id="L143">                    &quot;id&quot;,</span>
-<span class="nc" id="L144">                    &quot;INVALID_ID&quot;,</span>
-<span class="nc" id="L145">                    &quot;A valid user ID is required.&quot;);</span>
+                    &quot;id&quot;,
+                    &quot;INVALID_ID&quot;,
+                    &quot;A valid user ID is required.&quot;);
         }
 
         try {
 <span class="fc" id="L149">            Optional&lt;User&gt; result = userRepository.findById(userId);</span>
 <span class="pc bpc" id="L150" title="1 of 2 branches missed.">            if (result == null) {</span>
 <span class="nc" id="L151">                throw new IllegalStateException(</span>
-<span class="nc" id="L152">                        &quot;User repository returned an invalid result.&quot;);</span>
+                        &quot;User repository returned an invalid result.&quot;);
             }
 <span class="pc bpc" id="L154" title="1 of 2 branches missed.">            if (result.isEmpty()) {</span>
 <span class="nc" id="L155">                reject(</span>
-<span class="nc" id="L156">                        &quot;id&quot;,</span>
-<span class="nc" id="L157">                        &quot;NOT_FOUND&quot;,</span>
-<span class="nc" id="L158">                        &quot;Owner information could not be found.&quot;);</span>
+                        &quot;id&quot;,
+                        &quot;NOT_FOUND&quot;,
+                        &quot;Owner information could not be found.&quot;);
             }
 <span class="fc" id="L160">            return result.get().username();</span>
 <span class="nc" id="L161">        } catch (ValidationException exception) {</span>
 <span class="nc" id="L162">            throw exception;</span>
 <span class="nc" id="L163">        } catch (RuntimeException exception) {</span>
 <span class="nc" id="L164">            StructuredLogger.error(</span>
-<span class="nc" id="L165">                    &quot;user.lookup.failed | userId=&quot; + userId,</span>
-<span class="nc" id="L166">                    exception);</span>
+                    &quot;user.lookup.failed | userId=&quot; + userId,
+                    exception);
 <span class="nc" id="L167">            throw exception;</span>
         }
     }
 
     private void rejectInvalidCredentials() {
 <span class="fc" id="L172">        StructuredLogger.warn(</span>
-<span class="fc" id="L173">                &quot;user.login.rejected | reason=INVALID_CREDENTIALS&quot;);</span>
+                &quot;user.login.rejected | reason=INVALID_CREDENTIALS&quot;);
 
 <span class="fc" id="L175">        throw new ValidationException(</span>
-<span class="fc" id="L176">                &quot;USER&quot;,</span>
-<span class="fc" id="L177">                &quot;credentials&quot;,</span>
-<span class="fc" id="L178">                &quot;INVALID_CREDENTIALS&quot;,</span>
-<span class="fc" id="L179">                &quot;Username or password is incorrect.&quot;);</span>
+                &quot;USER&quot;,
+                &quot;credentials&quot;,
+                &quot;INVALID_CREDENTIALS&quot;,
+                &quot;Username or password is incorrect.&quot;);
     }
 
     private void reject(
@@ -185,14 +185,14 @@ public final class UserService {
             String message) {
 
 <span class="fc" id="L187">        StructuredLogger.warn(</span>
-<span class="fc" id="L188">                &quot;user.validation.rejected | field=&quot; + field</span>
-<span class="fc" id="L189">                        + &quot; | reason=&quot; + reason);</span>
+                &quot;user.validation.rejected | field=&quot; + field
+                        + &quot; | reason=&quot; + reason);
 
 <span class="fc" id="L191">        throw new ValidationException(</span>
-<span class="fc" id="L192">                &quot;USER&quot;,</span>
-<span class="fc" id="L193">                field,</span>
-<span class="fc" id="L194">                reason,</span>
-<span class="fc" id="L195">                message);</span>
+                &quot;USER&quot;,
+                field,
+                reason,
+                message);
     }
 
     private void logValidationRejection(ValidationException exception) {
@@ -204,7 +204,7 @@ public final class UserService {
     /**
      * Represents an authenticated user without exposing their password hash.
      */
-    public record AuthenticatedUser(
+<span class="fc" id="L207">    public record AuthenticatedUser(</span>
             long id,
             String username) {}
 }

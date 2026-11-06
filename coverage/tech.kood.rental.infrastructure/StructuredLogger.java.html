@@ -63,12 +63,12 @@ public final class StructuredLogger {
 <span class="fc" id="L63">        String timestamp = Instant.now().toString();</span>
 
 <span class="fc" id="L65">        String message = timestamp + &quot; | &quot;</span>
-<span class="fc" id="L66">                + label + &quot; | &quot;</span>
-<span class="fc" id="L67">                + safeEvent;</span>
+                + label + &quot; | &quot;
+                + safeEvent;
 
 <span class="fc bfc" id="L69" title="All 2 branches covered.">        if (exception == null) {</span>
 <span class="fc" id="L70">            LOGGER.log(javaLevel, message);</span>
-<span class="fc" id="L71">        } else {</span>
+        } else {
 <span class="fc" id="L72">            LOGGER.log(javaLevel, message, exception);</span>
         }
 <span class="fc" id="L74">    }</span>

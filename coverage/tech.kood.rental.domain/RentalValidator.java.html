@@ -17,19 +17,19 @@ public final class RentalValidator {
     public static void validate(long itemId, long renterId, int days) {
 <span class="fc bfc" id="L18" title="All 2 branches covered.">        if (itemId &lt;= 0) {</span>
 <span class="fc" id="L19">            throw new ValidationException(&quot;Rental&quot;, &quot;item&quot;, &quot;invalid&quot;,</span>
-<span class="fc" id="L20">                    &quot;a rental must refer to an item&quot;);</span>
+                    &quot;a rental must refer to an item&quot;);
         }
 <span class="fc bfc" id="L22" title="All 2 branches covered.">        if (renterId &lt;= 0) {</span>
 <span class="fc" id="L23">            throw new ValidationException(&quot;Rental&quot;, &quot;renter&quot;, &quot;invalid&quot;,</span>
-<span class="fc" id="L24">                    &quot;a rental must have a renter&quot;);</span>
+                    &quot;a rental must have a renter&quot;);
         }
 <span class="fc bfc" id="L26" title="All 2 branches covered.">        if (days &lt; 1) {</span>
 <span class="fc" id="L27">            throw new ValidationException(&quot;Rental&quot;, &quot;days&quot;, &quot;too_small&quot;,</span>
-<span class="fc" id="L28">                    &quot;rental duration must be at least 1 day&quot;);</span>
+                    &quot;rental duration must be at least 1 day&quot;);
         }
 <span class="fc bfc" id="L30" title="All 2 branches covered.">        if (days &gt; MAX_DAYS) {</span>
 <span class="fc" id="L31">            throw new ValidationException(&quot;Rental&quot;, &quot;days&quot;, &quot;too_large&quot;,</span>
-<span class="fc" id="L32">                    &quot;rental duration must not exceed &quot; + MAX_DAYS + &quot; days&quot;);</span>
+                    &quot;rental duration must not exceed &quot; + MAX_DAYS + &quot; days&quot;);
         }
 <span class="fc" id="L34">    }</span>
 }

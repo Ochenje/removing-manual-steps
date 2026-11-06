@@ -30,13 +30,13 @@ public class RentalService {
 <span class="fc" id="L30">        this.rentals = null;</span>
 <span class="fc" id="L31">    }</span>
 
-<span class="fc" id="L33">    public RentalService(</span>
+    public RentalService(
             DatabaseConnection database,
             ItemRepository items,
-            RentalRepository rentals) {
-<span class="pc bpc" id="L37" title="3 of 6 branches missed.">        if (database == null || items == null || rentals == null) {</span>
-<span class="nc" id="L38">            throw new IllegalArgumentException(</span>
-<span class="nc" id="L39">                    &quot;Database and repositories must not be null&quot;);</span>
+<span class="fc" id="L36">            RentalRepository rentals) {</span>
+<span class="fc bfc" id="L37" title="All 6 branches covered.">        if (database == null || items == null || rentals == null) {</span>
+<span class="fc" id="L38">            throw new IllegalArgumentException(</span>
+                    &quot;Database and repositories must not be null&quot;);
         }
 <span class="fc" id="L41">        this.database = database;</span>
 <span class="fc" id="L42">        this.items = items;</span>
@@ -55,40 +55,40 @@ public class RentalService {
 <span class="fc" id="L55">                    &quot;rental.validation.rejected | field=&quot; + exception.getField()</span>
 <span class="fc" id="L56">                            + &quot; | reason=&quot; + exception.getReason());</span>
 <span class="fc" id="L57">            throw exception;</span>
-        }
+<span class="fc" id="L58">        }</span>
 
 <span class="fc" id="L60">        StructuredLogger.info(</span>
-<span class="fc" id="L61">                &quot;rental.creation.started&quot;,</span>
+                &quot;rental.creation.started&quot;,
 <span class="fc" id="L62">                Map.of(&quot;item_id&quot;, itemId, &quot;renter_id&quot;, renterId));</span>
 
 <span class="fc" id="L64">        try (Connection connection = database.getConnection()) {</span>
 <span class="fc" id="L65">            connection.setAutoCommit(false);</span>
             try {
 <span class="fc" id="L67">                Item item = items.findById(connection, itemId)</span>
-<span class="pc" id="L68">                        .orElseThrow(() -&gt; rejection(</span>
-<span class="nc" id="L69">                                &quot;item&quot;, &quot;NOT_FOUND&quot;,</span>
-<span class="nc" id="L70">                                &quot;The requested item could not be found.&quot;));</span>
+<span class="fc" id="L68">                        .orElseThrow(() -&gt; rejection(</span>
+                                &quot;item&quot;, &quot;NOT_FOUND&quot;,
+                                &quot;The requested item could not be found.&quot;));
 
 <span class="fc" id="L72">                validateNotSelfRental(item.ownerId(), renterId);</span>
-<span class="pc bpc" id="L73" title="1 of 2 branches missed.">                validateItemAvailable(item.status() == ItemStatus.AVAILABLE);</span>
+<span class="fc bfc" id="L73" title="All 2 branches covered.">                validateItemAvailable(item.status() == ItemStatus.AVAILABLE);</span>
 
-<span class="fc" id="L75">                if (!items.changeStatus(</span>
-<span class="fc" id="L76">                        connection,</span>
-<span class="fc" id="L77">                        itemId,</span>
-<span class="fc" id="L78">                        ItemStatus.AVAILABLE,</span>
-<span class="pc bpc" id="L79" title="1 of 2 branches missed.">                        ItemStatus.RENTED)) {</span>
+<span class="pc bpc" id="L75" title="1 of 2 branches missed.">                if (!items.changeStatus(</span>
+                        connection,
+                        itemId,
+                        ItemStatus.AVAILABLE,
+                        ItemStatus.RENTED)) {
 <span class="nc" id="L80">                    throw rejection(</span>
-<span class="nc" id="L81">                            &quot;status&quot;, &quot;STATE_CHANGED&quot;,</span>
-<span class="nc" id="L82">                            &quot;This item is no longer available. Please refresh the listings.&quot;);</span>
+                            &quot;status&quot;, &quot;STATE_CHANGED&quot;,
+                            &quot;This item is no longer available. Please refresh the listings.&quot;);
                 }
 
 <span class="fc" id="L85">                Rental saved = rentals.insert(</span>
-<span class="fc" id="L86">                        connection,</span>
-<span class="fc" id="L87">                        new Rental(null, itemId, renterId, days, null, null));</span>
+                        connection,
+                        new Rental(null, itemId, renterId, days, null, null));
 <span class="fc" id="L88">                connection.commit();</span>
 
 <span class="fc" id="L90">                StructuredLogger.info(</span>
-<span class="fc" id="L91">                        &quot;rental.created&quot;,</span>
+                        &quot;rental.created&quot;,
 <span class="fc" id="L92">                        Map.of(</span>
 <span class="fc" id="L93">                                &quot;rental_id&quot;, saved.id(),</span>
 <span class="fc" id="L94">                                &quot;item_id&quot;, itemId,</span>
@@ -102,17 +102,17 @@ public class RentalService {
 <span class="fc" id="L102">            throw exception;</span>
 <span class="fc" id="L103">        } catch (SQLException exception) {</span>
 <span class="fc" id="L104">            DatabaseException failure =</span>
-<span class="fc" id="L105">                    new DatabaseException(&quot;create rental&quot;, exception);</span>
+                    new DatabaseException(&quot;create rental&quot;, exception);
 <span class="fc" id="L106">            StructuredLogger.error(</span>
-<span class="fc" id="L107">                    &quot;db.query&quot;,</span>
+                    &quot;db.query&quot;,
 <span class="fc" id="L108">                    Map.of(&quot;op&quot;, &quot;rental.create&quot;),</span>
-<span class="fc" id="L109">                    failure);</span>
+                    failure);
 <span class="fc" id="L110">            throw failure;</span>
 <span class="nc" id="L111">        } catch (DatabaseException exception) {</span>
 <span class="nc" id="L112">            StructuredLogger.error(</span>
-<span class="nc" id="L113">                    &quot;db.query&quot;,</span>
+                    &quot;db.query&quot;,
 <span class="nc" id="L114">                    Map.of(&quot;op&quot;, &quot;rental.create&quot;),</span>
-<span class="nc" id="L115">                    exception);</span>
+                    exception);
 <span class="nc" id="L116">            throw exception;</span>
         }
     }
@@ -127,35 +127,35 @@ public class RentalService {
 
 <span class="fc" id="L128">        try (Connection connection = database.getConnection()) {</span>
 <span class="fc" id="L129">            Item item = items.findById(connection, itemId)</span>
-<span class="pc" id="L130">                    .orElseThrow(() -&gt; rejection(</span>
-<span class="nc" id="L131">                            &quot;item&quot;, &quot;NOT_FOUND&quot;,</span>
-<span class="nc" id="L132">                            &quot;The requested item could not be found.&quot;));</span>
+<span class="fc" id="L130">                    .orElseThrow(() -&gt; rejection(</span>
+                            &quot;item&quot;, &quot;NOT_FOUND&quot;,
+                            &quot;The requested item could not be found.&quot;));
 <span class="fc" id="L133">            validateOwnership(item.ownerId(), ownerId);</span>
-<span class="pc bpc" id="L134" title="1 of 2 branches missed.">            if (item.status() != ItemStatus.RENTED) {</span>
-<span class="nc" id="L135">                throw rejection(</span>
-<span class="nc" id="L136">                        &quot;status&quot;, &quot;INVALID_STATE&quot;,</span>
-<span class="nc" id="L137">                        &quot;This item does not have an active rental.&quot;);</span>
+<span class="fc bfc" id="L134" title="All 2 branches covered.">            if (item.status() != ItemStatus.RENTED) {</span>
+<span class="fc" id="L135">                throw rejection(</span>
+                        &quot;status&quot;, &quot;INVALID_STATE&quot;,
+                        &quot;This item does not have an active rental.&quot;);
             }
 <span class="fc" id="L139">            return rentals.findActiveByItemId(connection, itemId)</span>
 <span class="pc" id="L140">                    .orElseThrow(() -&gt; rejection(</span>
-<span class="nc" id="L141">                            &quot;rental&quot;, &quot;NOT_FOUND&quot;,</span>
-<span class="nc" id="L142">                            &quot;No active rental was found for this item.&quot;));</span>
+                            &quot;rental&quot;, &quot;NOT_FOUND&quot;,
+                            &quot;No active rental was found for this item.&quot;));
 <span class="fc" id="L143">        } catch (ValidationException exception) {</span>
 <span class="fc" id="L144">            throw exception;</span>
 <span class="nc" id="L145">        } catch (SQLException exception) {</span>
 <span class="nc" id="L146">            DatabaseException failure =</span>
-<span class="nc" id="L147">                    new DatabaseException(&quot;read active rental details&quot;, exception);</span>
+                    new DatabaseException(&quot;read active rental details&quot;, exception);
 <span class="nc" id="L148">            StructuredLogger.error(</span>
-<span class="nc" id="L149">                    &quot;db.query&quot;,</span>
+                    &quot;db.query&quot;,
 <span class="nc" id="L150">                    Map.of(&quot;op&quot;, &quot;rental.details.read&quot;),</span>
-<span class="nc" id="L151">                    failure);</span>
+                    failure);
 <span class="nc" id="L152">            throw failure;</span>
-<span class="nc" id="L153">        } catch (DatabaseException exception) {</span>
-<span class="nc" id="L154">            StructuredLogger.error(</span>
-<span class="nc" id="L155">                    &quot;db.query&quot;,</span>
-<span class="nc" id="L156">                    Map.of(&quot;op&quot;, &quot;rental.details.read&quot;),</span>
-<span class="nc" id="L157">                    exception);</span>
-<span class="nc" id="L158">            throw exception;</span>
+<span class="fc" id="L153">        } catch (DatabaseException exception) {</span>
+<span class="fc" id="L154">            StructuredLogger.error(</span>
+                    &quot;db.query&quot;,
+<span class="fc" id="L156">                    Map.of(&quot;op&quot;, &quot;rental.details.read&quot;),</span>
+                    exception);
+<span class="fc" id="L158">            throw exception;</span>
         }
     }
 
@@ -168,52 +168,52 @@ public class RentalService {
 <span class="fc" id="L168">        validateItemId(itemId);</span>
 
 <span class="fc" id="L170">        StructuredLogger.info(</span>
-<span class="fc" id="L171">                &quot;rental.return.started&quot;,</span>
+                &quot;rental.return.started&quot;,
 <span class="fc" id="L172">                Map.of(&quot;item_id&quot;, itemId, &quot;owner_id&quot;, ownerId));</span>
 
 <span class="fc" id="L174">        try (Connection connection = database.getConnection()) {</span>
 <span class="fc" id="L175">            connection.setAutoCommit(false);</span>
             try {
 <span class="fc" id="L177">                Item item = items.findById(connection, itemId)</span>
-<span class="pc" id="L178">                        .orElseThrow(() -&gt; rejection(</span>
-<span class="nc" id="L179">                                &quot;item&quot;, &quot;NOT_FOUND&quot;,</span>
-<span class="nc" id="L180">                                &quot;The requested item could not be found.&quot;));</span>
+<span class="fc" id="L178">                        .orElseThrow(() -&gt; rejection(</span>
+                                &quot;item&quot;, &quot;NOT_FOUND&quot;,
+                                &quot;The requested item could not be found.&quot;));
 
 <span class="fc" id="L182">                validateOwnership(item.ownerId(), ownerId);</span>
 <span class="fc bfc" id="L183" title="All 2 branches covered.">                if (item.status() != ItemStatus.RENTED) {</span>
 <span class="fc" id="L184">                    throw rejection(</span>
-<span class="fc" id="L185">                            &quot;status&quot;, &quot;INVALID_STATE&quot;,</span>
-<span class="fc" id="L186">                            &quot;This item does not have an active rental.&quot;);</span>
+                            &quot;status&quot;, &quot;INVALID_STATE&quot;,
+                            &quot;This item does not have an active rental.&quot;);
                 }
 
 <span class="fc" id="L189">                Rental activeRental =</span>
 <span class="fc" id="L190">                        rentals.findActiveByItemId(connection, itemId)</span>
-<span class="pc" id="L191">                                .orElseThrow(() -&gt; rejection(</span>
-<span class="nc" id="L192">                                        &quot;rental&quot;, &quot;NOT_FOUND&quot;,</span>
-<span class="nc" id="L193">                                        &quot;No active rental was found for this item.&quot;));</span>
+<span class="fc" id="L191">                                .orElseThrow(() -&gt; rejection(</span>
+                                        &quot;rental&quot;, &quot;NOT_FOUND&quot;,
+                                        &quot;No active rental was found for this item.&quot;));
 
-<span class="pc bpc" id="L195" title="1 of 2 branches missed.">                if (!rentals.confirmReturn(connection, activeRental.id())) {</span>
-<span class="nc" id="L196">                    throw rejection(</span>
-<span class="nc" id="L197">                            &quot;rental&quot;, &quot;STATE_CHANGED&quot;,</span>
-<span class="nc" id="L198">                            &quot;This rental has already been returned.&quot;);</span>
+<span class="fc bfc" id="L195" title="All 2 branches covered.">                if (!rentals.confirmReturn(connection, activeRental.id())) {</span>
+<span class="fc" id="L196">                    throw rejection(</span>
+                            &quot;rental&quot;, &quot;STATE_CHANGED&quot;,
+                            &quot;This rental has already been returned.&quot;);
                 }
-<span class="fc" id="L200">                if (!items.changeStatus(</span>
-<span class="fc" id="L201">                        connection,</span>
-<span class="fc" id="L202">                        itemId,</span>
-<span class="fc" id="L203">                        ItemStatus.RENTED,</span>
-<span class="pc bpc" id="L204" title="1 of 2 branches missed.">                        ItemStatus.AVAILABLE)) {</span>
-<span class="nc" id="L205">                    throw rejection(</span>
-<span class="nc" id="L206">                            &quot;status&quot;, &quot;STATE_CHANGED&quot;,</span>
-<span class="nc" id="L207">                            &quot;The item status has changed. Please refresh and try again.&quot;);</span>
+<span class="fc bfc" id="L200" title="All 2 branches covered.">                if (!items.changeStatus(</span>
+                        connection,
+                        itemId,
+                        ItemStatus.RENTED,
+                        ItemStatus.AVAILABLE)) {
+<span class="fc" id="L205">                    throw rejection(</span>
+                            &quot;status&quot;, &quot;STATE_CHANGED&quot;,
+                            &quot;The item status has changed. Please refresh and try again.&quot;);
                 }
 
 <span class="fc" id="L210">                Rental returned = rentals.findById(connection, activeRental.id())</span>
 <span class="pc" id="L211">                        .orElseThrow(() -&gt; new SQLException(</span>
-<span class="nc" id="L212">                                &quot;The returned rental could not be read back.&quot;));</span>
+                                &quot;The returned rental could not be read back.&quot;));
 <span class="fc" id="L213">                connection.commit();</span>
 
 <span class="fc" id="L215">                StructuredLogger.info(</span>
-<span class="fc" id="L216">                        &quot;rental.return.confirmed&quot;,</span>
+                        &quot;rental.return.confirmed&quot;,
 <span class="fc" id="L217">                        Map.of(</span>
 <span class="fc" id="L218">                                &quot;rental_id&quot;, returned.id(),</span>
 <span class="fc" id="L219">                                &quot;item_id&quot;, itemId,</span>
@@ -227,25 +227,25 @@ public class RentalService {
 <span class="fc" id="L227">            throw exception;</span>
 <span class="nc" id="L228">        } catch (SQLException exception) {</span>
 <span class="nc" id="L229">            DatabaseException failure =</span>
-<span class="nc" id="L230">                    new DatabaseException(&quot;confirm rental return&quot;, exception);</span>
+                    new DatabaseException(&quot;confirm rental return&quot;, exception);
 <span class="nc" id="L231">            StructuredLogger.error(</span>
-<span class="nc" id="L232">                    &quot;db.query&quot;,</span>
+                    &quot;db.query&quot;,
 <span class="nc" id="L233">                    Map.of(&quot;op&quot;, &quot;rental.return.confirm&quot;),</span>
-<span class="nc" id="L234">                    failure);</span>
+                    failure);
 <span class="nc" id="L235">            throw failure;</span>
-<span class="nc" id="L236">        } catch (DatabaseException exception) {</span>
-<span class="nc" id="L237">            StructuredLogger.error(</span>
-<span class="nc" id="L238">                    &quot;db.query&quot;,</span>
-<span class="nc" id="L239">                    Map.of(&quot;op&quot;, &quot;rental.return.confirm&quot;),</span>
-<span class="nc" id="L240">                    exception);</span>
-<span class="nc" id="L241">            throw exception;</span>
+<span class="fc" id="L236">        } catch (DatabaseException exception) {</span>
+<span class="fc" id="L237">            StructuredLogger.error(</span>
+                    &quot;db.query&quot;,
+<span class="fc" id="L239">                    Map.of(&quot;op&quot;, &quot;rental.return.confirm&quot;),</span>
+                    exception);
+<span class="fc" id="L241">            throw exception;</span>
         }
     }
 
     private void requireConfigured() {
-<span class="pc bpc" id="L246" title="3 of 6 branches missed.">        if (database == null || items == null || rentals == null) {</span>
-<span class="nc" id="L247">            throw new IllegalStateException(</span>
-<span class="nc" id="L248">                    &quot;Rental operations require a database and repositories.&quot;);</span>
+<span class="pc bpc" id="L246" title="2 of 6 branches missed.">        if (database == null || items == null || rentals == null) {</span>
+<span class="fc" id="L247">            throw new IllegalStateException(</span>
+                    &quot;Rental operations require a database and repositories.&quot;);
         }
 <span class="fc" id="L250">    }</span>
 
@@ -254,11 +254,11 @@ public class RentalService {
             Exception failure) {
         try {
 <span class="fc" id="L256">            connection.rollback();</span>
-<span class="pc" id="L257">        } catch (SQLException rollbackFailure) {</span>
+<span class="nc" id="L257">        } catch (SQLException rollbackFailure) {</span>
 <span class="nc" id="L258">            failure.addSuppressed(rollbackFailure);</span>
 <span class="nc" id="L259">            StructuredLogger.error(</span>
-<span class="nc" id="L260">                    &quot;db.transaction.rollback.failed&quot;, rollbackFailure);</span>
-        }
+                    &quot;db.transaction.rollback.failed&quot;, rollbackFailure);
+<span class="fc" id="L261">        }</span>
 <span class="fc" id="L262">    }</span>
 
     private static ValidationException rejection(
@@ -266,113 +266,113 @@ public class RentalService {
             String reason,
             String message) {
 <span class="fc" id="L268">        StructuredLogger.warn(</span>
-<span class="fc" id="L269">                &quot;validation.failed | entity=Rental&quot;</span>
-<span class="fc" id="L270">                        + &quot; field=&quot; + field</span>
-<span class="fc" id="L271">                        + &quot; reason=&quot; + reason);</span>
+                &quot;validation.failed | entity=Rental&quot;
+                        + &quot; field=&quot; + field
+                        + &quot; reason=&quot; + reason);
 <span class="fc" id="L272">        return new ValidationException(</span>
-<span class="fc" id="L273">                &quot;Rental&quot;, field, reason, message);</span>
+                &quot;Rental&quot;, field, reason, message);
     }
 
     private static void validateUserId(long userId) {
-<span class="pc bpc" id="L277" title="1 of 2 branches missed.">        if (userId &lt;= 0) {</span>
-<span class="nc" id="L278">            throw rejection(</span>
-<span class="nc" id="L279">                    &quot;ownerId&quot;, &quot;INVALID_ID&quot;,</span>
-<span class="nc" id="L280">                    &quot;A valid authenticated user is required.&quot;);</span>
+<span class="fc bfc" id="L277" title="All 2 branches covered.">        if (userId &lt;= 0) {</span>
+<span class="fc" id="L278">            throw rejection(</span>
+                    &quot;ownerId&quot;, &quot;INVALID_ID&quot;,
+                    &quot;A valid authenticated user is required.&quot;);
         }
 <span class="fc" id="L282">    }</span>
 
     private static void validateItemId(long itemId) {
-<span class="pc bpc" id="L285" title="1 of 2 branches missed.">        if (itemId &lt;= 0) {</span>
-<span class="nc" id="L286">            throw rejection(</span>
-<span class="nc" id="L287">                    &quot;item&quot;, &quot;INVALID_ID&quot;,</span>
-<span class="nc" id="L288">                    &quot;A valid item ID is required.&quot;);</span>
+<span class="fc bfc" id="L285" title="All 2 branches covered.">        if (itemId &lt;= 0) {</span>
+<span class="fc" id="L286">            throw rejection(</span>
+                    &quot;item&quot;, &quot;INVALID_ID&quot;,
+                    &quot;A valid item ID is required.&quot;);
         }
 <span class="fc" id="L290">    }</span>
 
     public void validateUsername(String username) {
 <span class="fc bfc" id="L293" title="All 4 branches covered.">        if (username == null || username.isBlank()) {</span>
 <span class="fc" id="L294">            throw rejection(</span>
-<span class="fc" id="L295">                    &quot;username&quot;, &quot;BLANK_VALUE&quot;,</span>
-<span class="fc" id="L296">                    &quot;Username cannot be blank.&quot;);</span>
+                    &quot;username&quot;, &quot;BLANK_VALUE&quot;,
+                    &quot;Username cannot be blank.&quot;);
         }
 
 <span class="fc bfc" id="L299" title="All 4 branches covered.">        if (username.length() &lt; 3 || username.length() &gt; 30) {</span>
 <span class="fc" id="L300">            throw rejection(</span>
-<span class="fc" id="L301">                    &quot;username&quot;, &quot;INVALID_LENGTH&quot;,</span>
-<span class="fc" id="L302">                    &quot;Username must be between 3 and 30 characters.&quot;);</span>
+                    &quot;username&quot;, &quot;INVALID_LENGTH&quot;,
+                    &quot;Username must be between 3 and 30 characters.&quot;);
         }
 
 <span class="fc bfc" id="L305" title="All 2 branches covered.">        if (!username.matches(&quot;^[a-zA-Z0-9_]+$&quot;)) {</span>
 <span class="fc" id="L306">            throw rejection(</span>
-<span class="fc" id="L307">                    &quot;username&quot;, &quot;INVALID_FORMAT&quot;,</span>
-<span class="fc" id="L308">                    &quot;Username can only contain letters, numbers, and underscores.&quot;);</span>
+                    &quot;username&quot;, &quot;INVALID_FORMAT&quot;,
+                    &quot;Username can only contain letters, numbers, and underscores.&quot;);
         }
 
 <span class="fc" id="L311">        StructuredLogger.info(</span>
-<span class="fc" id="L312">                &quot;validation.success | entity=User field=username&quot;);</span>
+                &quot;validation.success | entity=User field=username&quot;);
 <span class="fc" id="L313">    }</span>
 
     public void validateRentalDuration(int days) {
 <span class="fc" id="L316">        RentalValidator.validate(1, 1, days);</span>
 
 <span class="fc" id="L318">        StructuredLogger.info(</span>
-<span class="fc" id="L319">                &quot;validation.success | entity=Rental field=durationDays&quot;);</span>
+                &quot;validation.success | entity=Rental field=durationDays&quot;);
 <span class="fc" id="L320">    }</span>
 
     public void validateItemCost(double cost) {
 <span class="fc bfc" id="L323" title="All 4 branches covered.">        if (!Double.isFinite(cost) || cost &lt; 0) {</span>
 <span class="fc" id="L324">            throw rejection(</span>
-<span class="fc" id="L325">                    &quot;cost&quot;, &quot;INVALID_VALUE&quot;,</span>
-<span class="fc" id="L326">                    &quot;Item cost must be a finite, non-negative value.&quot;);</span>
+                    &quot;cost&quot;, &quot;INVALID_VALUE&quot;,
+                    &quot;Item cost must be a finite, non-negative value.&quot;);
         }
 
 <span class="fc" id="L329">        StructuredLogger.info(</span>
-<span class="fc" id="L330">                &quot;validation.success | entity=Item field=cost&quot;);</span>
+                &quot;validation.success | entity=Item field=cost&quot;);
 <span class="fc" id="L331">    }</span>
 
     public void validateNotSelfRental(long ownerId, long renterId) {
 <span class="fc bfc" id="L334" title="All 4 branches covered.">        if (ownerId &lt;= 0 || renterId &lt;= 0) {</span>
 <span class="fc" id="L335">            throw rejection(</span>
-<span class="fc" id="L336">                    &quot;userId&quot;, &quot;INVALID_ID&quot;,</span>
-<span class="fc" id="L337">                    &quot;Owner and renter IDs must be valid positive numbers.&quot;);</span>
+                    &quot;userId&quot;, &quot;INVALID_ID&quot;,
+                    &quot;Owner and renter IDs must be valid positive numbers.&quot;);
         }
 
 <span class="fc bfc" id="L340" title="All 2 branches covered.">        if (ownerId == renterId) {</span>
 <span class="fc" id="L341">            throw rejection(</span>
-<span class="fc" id="L342">                    &quot;renterId&quot;, &quot;SELF_RENTAL_DENIED&quot;,</span>
-<span class="fc" id="L343">                    &quot;You cannot rent your own item.&quot;);</span>
+                    &quot;renterId&quot;, &quot;SELF_RENTAL_DENIED&quot;,
+                    &quot;You cannot rent your own item.&quot;);
         }
 
 <span class="fc" id="L346">        StructuredLogger.info(</span>
-<span class="fc" id="L347">                &quot;validation.success | entity=Rental field=renterId&quot;);</span>
+                &quot;validation.success | entity=Rental field=renterId&quot;);
 <span class="fc" id="L348">    }</span>
 
     public void validateOwnership(long ownerId, long currentUserId) {
 <span class="fc bfc" id="L351" title="All 4 branches covered.">        if (ownerId &lt;= 0 || currentUserId &lt;= 0) {</span>
 <span class="fc" id="L352">            throw rejection(</span>
-<span class="fc" id="L353">                    &quot;ownerId&quot;, &quot;INVALID_ID&quot;,</span>
-<span class="fc" id="L354">                    &quot;Owner and current user IDs must be valid positive numbers.&quot;);</span>
+                    &quot;ownerId&quot;, &quot;INVALID_ID&quot;,
+                    &quot;Owner and current user IDs must be valid positive numbers.&quot;);
         }
 
 <span class="fc bfc" id="L357" title="All 2 branches covered.">        if (ownerId != currentUserId) {</span>
 <span class="fc" id="L358">            throw rejection(</span>
-<span class="fc" id="L359">                    &quot;ownerId&quot;, &quot;UNAUTHORIZED_MANAGEMENT&quot;,</span>
-<span class="fc" id="L360">                    &quot;You can only manage items that you own.&quot;);</span>
+                    &quot;ownerId&quot;, &quot;UNAUTHORIZED_MANAGEMENT&quot;,
+                    &quot;You can only manage items that you own.&quot;);
         }
 
 <span class="fc" id="L363">        StructuredLogger.info(</span>
-<span class="fc" id="L364">                &quot;validation.success | entity=Item field=ownerId&quot;);</span>
+                &quot;validation.success | entity=Item field=ownerId&quot;);
 <span class="fc" id="L365">    }</span>
 
     public void validateItemAvailable(boolean available) {
 <span class="fc bfc" id="L368" title="All 2 branches covered.">        if (!available) {</span>
 <span class="fc" id="L369">            throw rejection(</span>
-<span class="fc" id="L370">                    &quot;status&quot;, &quot;ITEM_UNAVAILABLE&quot;,</span>
-<span class="fc" id="L371">                    &quot;This item is not available for rental.&quot;);</span>
+                    &quot;status&quot;, &quot;ITEM_UNAVAILABLE&quot;,
+                    &quot;This item is not available for rental.&quot;);
         }
 
 <span class="fc" id="L374">        StructuredLogger.info(</span>
-<span class="fc" id="L375">                &quot;validation.success | entity=Item field=status&quot;);</span>
+                &quot;validation.success | entity=Item field=status&quot;);
 <span class="fc" id="L376">    }</span>
 
     public void validateUsernameAvailable(
@@ -382,12 +382,12 @@ public class RentalService {
 
 <span class="fc bfc" id="L383" title="All 2 branches covered.">        if (usernameAlreadyExists) {</span>
 <span class="fc" id="L384">            throw rejection(</span>
-<span class="fc" id="L385">                    &quot;username&quot;, &quot;DUPLICATE_USERNAME&quot;,</span>
-<span class="fc" id="L386">                    &quot;That username is already taken.&quot;);</span>
+                    &quot;username&quot;, &quot;DUPLICATE_USERNAME&quot;,
+                    &quot;That username is already taken.&quot;);
         }
 
 <span class="fc" id="L389">        StructuredLogger.info(</span>
-<span class="fc" id="L390">                &quot;validation.success | entity=User field=username_availability&quot;);</span>
+                &quot;validation.success | entity=User field=username_availability&quot;);
 <span class="fc" id="L391">    }</span>
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.14.202510111229</span></div></body></html>

@@ -21,41 +21,41 @@ public final class Main {
     }
 
     public static void main(String[] args) {
-<span class="nc bnc" id="L24" title="All 2 branches missed.">        String databasePath = args.length &gt; 0</span>
-<span class="nc" id="L25">                ? args[0]</span>
-<span class="nc" id="L26">                : System.getenv().getOrDefault(</span>
-<span class="nc" id="L27">                        &quot;DATABASE_PATH&quot;, DEFAULT_DATABASE_PATH);</span>
-<span class="nc" id="L28">        DatabaseConnection database = new DatabaseConnection(databasePath);</span>
+<span class="pc bpc" id="L24" title="1 of 2 branches missed.">        String databasePath = args.length &gt; 0</span>
+<span class="fc" id="L25">                ? args[0]</span>
+<span class="pc" id="L26">                : System.getenv().getOrDefault(</span>
+                        &quot;DATABASE_PATH&quot;, DEFAULT_DATABASE_PATH);
+<span class="fc" id="L28">        DatabaseConnection database = new DatabaseConnection(databasePath);</span>
 
         try {
-<span class="nc" id="L31">            database.initialize();</span>
+<span class="fc" id="L31">            database.initialize();</span>
 <span class="nc" id="L32">        } catch (SQLException exception) {</span>
 <span class="nc" id="L33">            StructuredLogger.error(&quot;db.startup.failed&quot;, exception);</span>
 <span class="nc" id="L34">            System.err.println(</span>
-<span class="nc" id="L35">                    &quot;The application could not open its database. Check the log for details.&quot;);</span>
+                    &quot;The application could not open its database. Check the log for details.&quot;);
 <span class="nc" id="L36">            System.exit(1);</span>
 <span class="nc" id="L37">            return;</span>
-        }
+<span class="fc" id="L38">        }</span>
 
-<span class="nc" id="L40">        StructuredLogger.info(&quot;application.started&quot;);</span>
+<span class="fc" id="L40">        StructuredLogger.info(&quot;application.started&quot;);</span>
         try {
-<span class="nc" id="L42">            UserRepository users = new UserRepository(database);</span>
-<span class="nc" id="L43">            ItemRepository items = new ItemRepository(database);</span>
-<span class="nc" id="L44">            RentalRepository rentals = new RentalRepository(database);</span>
-<span class="nc" id="L45">            UserService userService =</span>
-<span class="nc" id="L46">                    new UserService(users, new PasswordHasher());</span>
-<span class="nc" id="L47">            ItemService itemService = new ItemService(items);</span>
-<span class="nc" id="L48">            RentalService rentalService =</span>
-<span class="nc" id="L49">                    new RentalService(database, items, rentals);</span>
+<span class="fc" id="L42">            UserRepository users = new UserRepository(database);</span>
+<span class="fc" id="L43">            ItemRepository items = new ItemRepository(database);</span>
+<span class="fc" id="L44">            RentalRepository rentals = new RentalRepository(database);</span>
+<span class="fc" id="L45">            UserService userService =</span>
+                    new UserService(users, new PasswordHasher());
+<span class="fc" id="L47">            ItemService itemService = new ItemService(items);</span>
+<span class="fc" id="L48">            RentalService rentalService =</span>
+                    new RentalService(database, items, rentals);
 
-<span class="nc" id="L51">            new CliHandler(userService, itemService, rentalService).start();</span>
+<span class="fc" id="L51">            new CliHandler(userService, itemService, rentalService).start();</span>
 <span class="nc" id="L52">        } catch (RuntimeException exception) {</span>
 <span class="nc" id="L53">            StructuredLogger.error(&quot;application.failed&quot;, exception);</span>
 <span class="nc" id="L54">            System.err.println(</span>
-<span class="nc" id="L55">                    &quot;The application encountered an error. Check the log for details.&quot;);</span>
+                    &quot;The application encountered an error. Check the log for details.&quot;);
         } finally {
-<span class="nc" id="L57">            StructuredLogger.info(&quot;application.stopped&quot;);</span>
+<span class="fc" id="L57">            StructuredLogger.info(&quot;application.stopped&quot;);</span>
         }
-<span class="nc" id="L59">    }</span>
+<span class="fc" id="L59">    }</span>
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.14.202510111229</span></div></body></html>
