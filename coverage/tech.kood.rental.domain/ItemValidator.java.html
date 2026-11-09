@@ -25,11 +25,11 @@ public final class ItemValidator {
         // NaN and infinity are not real prices
 <span class="fc bfc" id="L26" title="All 4 branches covered.">        if (Double.isNaN(costPerDay) || Double.isInfinite(costPerDay)) {</span>
 <span class="fc" id="L27">            throw new ValidationException(&quot;Item&quot;, &quot;cost&quot;, &quot;invalid&quot;,</span>
-<span class="fc" id="L28">                    &quot;cost per day must be a valid number&quot;);</span>
+                    &quot;cost per day must be a valid number&quot;);
         }
 <span class="fc bfc" id="L30" title="All 2 branches covered.">        if (costPerDay &lt; 0) {</span>
 <span class="fc" id="L31">            throw new ValidationException(&quot;Item&quot;, &quot;cost&quot;, &quot;negative&quot;,</span>
-<span class="fc" id="L32">                    &quot;cost per day must not be negative&quot;);</span>
+                    &quot;cost per day must not be negative&quot;);
         }
 <span class="fc" id="L34">    }</span>
 

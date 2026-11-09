@@ -54,14 +54,14 @@ public class RentalRepository {
 <span class="fc" id="L54">            try (ResultSet keys = statement.getGeneratedKeys()) {</span>
 <span class="pc bpc" id="L55" title="1 of 2 branches missed.">                if (!keys.next()) {</span>
 <span class="nc" id="L56">                    throw new SQLException(</span>
-<span class="nc" id="L57">                            &quot;The inserted rental ID could not be retrieved.&quot;);</span>
+                            &quot;The inserted rental ID could not be retrieved.&quot;);
                 }
 
 <span class="fc" id="L60">                Rental saved = readById(connection, keys.getLong(1));</span>
 
 <span class="pc bpc" id="L62" title="1 of 2 branches missed.">                if (saved == null) {</span>
 <span class="nc" id="L63">                    throw new SQLException(</span>
-<span class="nc" id="L64">                            &quot;The inserted rental could not be read back.&quot;);</span>
+                            &quot;The inserted rental could not be read back.&quot;);
                 }
 
 <span class="fc" id="L67">                return saved;</span>
@@ -160,8 +160,8 @@ public class RentalRepository {
 <span class="fc" id="L160">                row.getLong(&quot;item_id&quot;),</span>
 <span class="fc" id="L161">                row.getLong(&quot;renter_id&quot;),</span>
 <span class="fc" id="L162">                row.getInt(&quot;days&quot;),</span>
-<span class="fc" id="L163">                rentedAt,</span>
-<span class="fc" id="L164">                returnedAt</span>
+                rentedAt,
+                returnedAt
         );
     }
 }

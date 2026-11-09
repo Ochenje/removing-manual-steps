@@ -75,8 +75,8 @@ Run tests with `mvn test`; `mvn verify` also packages the application. JaCoCo
 generates the tracked HTML report at [`coverage/index.html`](coverage/index.html)
 and XML report at [`coverage/jacoco.xml`](coverage/jacoco.xml).
 
-The current full run reports 239 tests passing, with 0 failures and 0 errors.
-Coverage is 87.6% of instructions, 83.4% of lines, and 77.8% of branches.
+The current full run reports 269 tests passing, with 0 failures and 0 errors.
+Coverage is 92.08% of instructions, 89.84% of lines, and 86.82% of branches.
 Remaining uncovered code is concentrated in application and seed-data entry
 points, startup/error paths, and less common database and CLI failure branches;
 these figures are reported as-is rather than presented as full coverage.
