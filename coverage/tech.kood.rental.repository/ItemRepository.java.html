@@ -95,10 +95,10 @@ public class ItemRepository {
 
     public long countAvailableNotOwnedBy(long userId) {
 <span class="fc" id="L97">        return count(</span>
-<span class="fc" id="L98">                &quot;count available items&quot;,</span>
-<span class="fc" id="L99">                &quot;SELECT COUNT(*) FROM items &quot;</span>
+                &quot;count available items&quot;,
+                &quot;SELECT COUNT(*) FROM items &quot;
                         + &quot;WHERE status = 'AVAILABLE' AND owner_id &lt;&gt; ?&quot;,
-<span class="fc" id="L101">                userId);</span>
+                userId);
     }
 
     public List&lt;Item&gt; listByOwner(long ownerId, int limit, int offset) {
@@ -110,9 +110,9 @@ public class ItemRepository {
 
     public long countByOwner(long ownerId) {
 <span class="fc" id="L112">        return count(</span>
-<span class="fc" id="L113">                &quot;count items by owner&quot;,</span>
-<span class="fc" id="L114">                &quot;SELECT COUNT(*) FROM items WHERE owner_id = ?&quot;,</span>
-<span class="fc" id="L115">                ownerId);</span>
+                &quot;count items by owner&quot;,
+                &quot;SELECT COUNT(*) FROM items WHERE owner_id = ?&quot;,
+                ownerId);
     }
 
     public List&lt;Item&gt; listRentedByOwner(long ownerId, int limit, int offset) {
@@ -125,10 +125,10 @@ public class ItemRepository {
 
     public long countRentedByOwner(long ownerId) {
 <span class="fc" id="L127">        return count(</span>
-<span class="fc" id="L128">                &quot;count rented items by owner&quot;,</span>
-<span class="fc" id="L129">                &quot;SELECT COUNT(*) FROM items &quot;</span>
+                &quot;count rented items by owner&quot;,
+                &quot;SELECT COUNT(*) FROM items &quot;
                         + &quot;WHERE owner_id = ? AND status = 'RENTED'&quot;,
-<span class="fc" id="L131">                ownerId);</span>
+                ownerId);
     }
 
     public boolean changeStatus(

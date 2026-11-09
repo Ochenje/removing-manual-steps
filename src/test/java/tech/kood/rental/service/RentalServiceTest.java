@@ -233,4 +233,27 @@ void rejectsInvalidCurrentUserIdForOwnership() {
     );
 }
 
+    @Test
+    void refusesRentalOperationWhenNotConfigured() {
+        assertThrows(
+                IllegalStateException.class,
+                () -> service.rentItem(1, 1, 1)
+        );
+    }
+
+    @Test
+    void refusesActiveRentalLookupWhenNotConfigured() {
+        assertThrows(
+                IllegalStateException.class,
+                () -> service.getActiveRentalForOwner(1, 1)
+        );
+    }
+
+    @Test
+    void refusesReturnConfirmationWhenNotConfigured() {
+        assertThrows(
+                IllegalStateException.class,
+                () -> service.confirmReturn(1, 1)
+        );
+    }
 }

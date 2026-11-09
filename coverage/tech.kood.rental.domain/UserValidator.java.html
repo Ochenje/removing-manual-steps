@@ -34,13 +34,13 @@ public final class UserValidator {
 
 <span class="fc bfc" id="L35" title="All 2 branches covered.">        if (password.length() &lt; PASSWORD_MIN) {</span>
 <span class="fc" id="L36">            throw new ValidationException(&quot;User&quot;, &quot;password&quot;, &quot;too_short&quot;,</span>
-<span class="fc" id="L37">                    &quot;password must be at least &quot; + PASSWORD_MIN + &quot; characters&quot;);</span>
+                    &quot;password must be at least &quot; + PASSWORD_MIN + &quot; characters&quot;);
         }
 
         // BCrypt supports a maximum of 72 UTF-8 bytes
 <span class="pc bpc" id="L41" title="1 of 2 branches missed.">        if (password.getBytes(StandardCharsets.UTF_8).length &gt; PASSWORD_MAX_BYTES) {</span>
 <span class="nc" id="L42">            throw new ValidationException(&quot;User&quot;, &quot;password&quot;, &quot;too_long&quot;,</span>
-<span class="nc" id="L43">                    &quot;password must not exceed &quot; + PASSWORD_MAX_BYTES + &quot; UTF-8 bytes&quot;);</span>
+                    &quot;password must not exceed &quot; + PASSWORD_MAX_BYTES + &quot; UTF-8 bytes&quot;);
         }
 <span class="fc" id="L45">    }</span>
 
@@ -59,29 +59,29 @@ public final class UserValidator {
 <span class="fc" id="L59">        String normalized = normalizeUsername(username);</span>
 <span class="fc bfc" id="L60" title="All 2 branches covered.">        if (normalized.length() &lt; USERNAME_MIN) {</span>
 <span class="fc" id="L61">            throw new ValidationException(&quot;User&quot;, &quot;username&quot;, &quot;too_short&quot;,</span>
-<span class="fc" id="L62">                    &quot;username must be at least &quot; + USERNAME_MIN + &quot; characters&quot;);</span>
+                    &quot;username must be at least &quot; + USERNAME_MIN + &quot; characters&quot;);
         }
 <span class="fc bfc" id="L64" title="All 2 branches covered.">        if (normalized.length() &gt; USERNAME_MAX) {</span>
 <span class="fc" id="L65">            throw new ValidationException(&quot;User&quot;, &quot;username&quot;, &quot;too_long&quot;,</span>
-<span class="fc" id="L66">                    &quot;username must be at most &quot; + USERNAME_MAX + &quot; characters&quot;);</span>
+                    &quot;username must be at most &quot; + USERNAME_MAX + &quot; characters&quot;);
         }
 <span class="fc bfc" id="L68" title="All 2 branches covered.">        if (!normalized.matches(&quot;[A-Za-z0-9_]+&quot;)) {</span>
 <span class="fc" id="L69">            throw new ValidationException(&quot;User&quot;, &quot;username&quot;, &quot;invalid_format&quot;,</span>
-<span class="fc" id="L70">                    &quot;username can only contain letters, numbers, and underscores&quot;);</span>
+                    &quot;username can only contain letters, numbers, and underscores&quot;);
         }
 <span class="fc" id="L72">    }</span>
 
     private static void requireUsername(String username) {
 <span class="fc bfc" id="L75" title="All 4 branches covered.">        if (username == null || username.isBlank()) {</span>
 <span class="fc" id="L76">            throw new ValidationException(&quot;User&quot;, &quot;username&quot;, &quot;blank&quot;,</span>
-<span class="fc" id="L77">                    &quot;username must not be empty&quot;);</span>
+                    &quot;username must not be empty&quot;);
         }
 <span class="fc" id="L79">    }</span>
 
     private static void requirePassword(String password) {
 <span class="fc bfc" id="L82" title="All 4 branches covered.">        if (password == null || password.isBlank()) {</span>
 <span class="fc" id="L83">            throw new ValidationException(&quot;User&quot;, &quot;password&quot;, &quot;blank&quot;,</span>
-<span class="fc" id="L84">                    &quot;password must not be empty&quot;);</span>
+                    &quot;password must not be empty&quot;);
         }
 <span class="fc" id="L86">    }</span>
 }

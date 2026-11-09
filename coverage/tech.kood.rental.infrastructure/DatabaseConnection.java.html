@@ -44,15 +44,15 @@ public class DatabaseConnection {
 <span class="nc" id="L44">                connection.close();</span>
 <span class="nc" id="L45">            } catch (SQLException closeException) {</span>
 <span class="nc" id="L46">                e.addSuppressed(closeException);</span>
-            }
+<span class="nc" id="L47">            }</span>
 <span class="nc" id="L48">            StructuredLogger.error(</span>
-<span class="nc" id="L49">                    &quot;db.connection.open.failed&quot;,</span>
+                    &quot;db.connection.open.failed&quot;,
 <span class="nc" id="L50">                    Map.of(&quot;database&quot;, file),</span>
-<span class="nc" id="L51">                    e);</span>
+                    e);
 <span class="nc" id="L52">            throw e;</span>
-        }
+<span class="fc" id="L53">        }</span>
 <span class="fc" id="L54">        StructuredLogger.info(</span>
-<span class="fc" id="L55">                &quot;db.connection.opened&quot;,</span>
+                &quot;db.connection.opened&quot;,
 <span class="fc" id="L56">                Map.of(&quot;database&quot;, file));</span>
 <span class="fc" id="L57">        return logClose(connection);</span>
     }
@@ -67,14 +67,14 @@ public class DatabaseConnection {
             }
 <span class="fc" id="L68">        } catch (IOException e) {</span>
 <span class="fc" id="L69">            throw new SQLException(&quot;could not create the database folder&quot;, e);</span>
-        }
+<span class="fc" id="L70">        }</span>
 
 <span class="fc" id="L72">        List&lt;String&gt; statements = splitStatements(readSchema());</span>
 <span class="fc" id="L73">        try (Connection connection = getConnection();</span>
 <span class="fc" id="L74">             Statement statement = connection.createStatement()) {</span>
 <span class="fc bfc" id="L75" title="All 2 branches covered.">            for (String sql : statements) {</span>
 <span class="fc" id="L76">                statement.execute(sql);</span>
-            }
+<span class="fc" id="L77">            }</span>
         }
 <span class="fc" id="L79">    }</span>
 
@@ -112,23 +112,23 @@ public class DatabaseConnection {
 <span class="fc" id="L112">        AtomicBoolean closed = new AtomicBoolean();</span>
 <span class="fc" id="L113">        return (Connection) Proxy.newProxyInstance(</span>
 <span class="fc" id="L114">                Connection.class.getClassLoader(),</span>
-<span class="fc" id="L115">                new Class&lt;?&gt;[] {Connection.class},</span>
-<span class="fc" id="L116">                (proxy, method, arguments) -&gt; {</span>
+                new Class&lt;?&gt;[] {Connection.class},
+                (proxy, method, arguments) -&gt; {
 <span class="fc bfc" id="L117" title="All 2 branches covered.">                    if (method.getName().equals(&quot;close&quot;)</span>
 <span class="pc bpc" id="L118" title="1 of 2 branches missed.">                            &amp;&amp; method.getParameterCount() == 0) {</span>
 <span class="fc bfc" id="L119" title="All 2 branches covered.">                        if (closed.compareAndSet(false, true)) {</span>
                             try {
 <span class="fc" id="L121">                                connection.close();</span>
 <span class="fc" id="L122">                                StructuredLogger.info(</span>
-<span class="fc" id="L123">                                        &quot;db.connection.closed&quot;,</span>
+                                        &quot;db.connection.closed&quot;,
 <span class="fc" id="L124">                                        Map.of(&quot;database&quot;, file));</span>
-<span class="pc" id="L125">                            } catch (SQLException exception) {</span>
+<span class="nc" id="L125">                            } catch (SQLException exception) {</span>
 <span class="nc" id="L126">                                StructuredLogger.error(</span>
-<span class="nc" id="L127">                                        &quot;db.connection.close.failed&quot;,</span>
+                                        &quot;db.connection.close.failed&quot;,
 <span class="nc" id="L128">                                        Map.of(&quot;database&quot;, file),</span>
-<span class="nc" id="L129">                                        exception);</span>
+                                        exception);
 <span class="nc" id="L130">                                throw exception;</span>
-                            }
+<span class="fc" id="L131">                            }</span>
                         }
 <span class="fc" id="L133">                        return null;</span>
                     }
