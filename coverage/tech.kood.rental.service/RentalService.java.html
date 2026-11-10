@@ -72,12 +72,12 @@ public class RentalService {
 <span class="fc" id="L72">                validateNotSelfRental(item.ownerId(), renterId);</span>
 <span class="fc bfc" id="L73" title="All 2 branches covered.">                validateItemAvailable(item.status() == ItemStatus.AVAILABLE);</span>
 
-<span class="pc bpc" id="L75" title="1 of 2 branches missed.">                if (!items.changeStatus(</span>
+<span class="fc bfc" id="L75" title="All 2 branches covered.">                if (!items.changeStatus(</span>
                         connection,
                         itemId,
                         ItemStatus.AVAILABLE,
                         ItemStatus.RENTED)) {
-<span class="nc" id="L80">                    throw rejection(</span>
+<span class="fc" id="L80">                    throw rejection(</span>
                             &quot;status&quot;, &quot;STATE_CHANGED&quot;,
                             &quot;This item is no longer available. Please refresh the listings.&quot;);
                 }
@@ -108,12 +108,12 @@ public class RentalService {
 <span class="fc" id="L108">                    Map.of(&quot;op&quot;, &quot;rental.create&quot;),</span>
                     failure);
 <span class="fc" id="L110">            throw failure;</span>
-<span class="nc" id="L111">        } catch (DatabaseException exception) {</span>
-<span class="nc" id="L112">            StructuredLogger.error(</span>
+<span class="fc" id="L111">        } catch (DatabaseException exception) {</span>
+<span class="fc" id="L112">            StructuredLogger.error(</span>
                     &quot;db.query&quot;,
-<span class="nc" id="L114">                    Map.of(&quot;op&quot;, &quot;rental.create&quot;),</span>
+<span class="fc" id="L114">                    Map.of(&quot;op&quot;, &quot;rental.create&quot;),</span>
                     exception);
-<span class="nc" id="L116">            throw exception;</span>
+<span class="fc" id="L116">            throw exception;</span>
         }
     }
 
@@ -137,19 +137,19 @@ public class RentalService {
                         &quot;This item does not have an active rental.&quot;);
             }
 <span class="fc" id="L139">            return rentals.findActiveByItemId(connection, itemId)</span>
-<span class="pc" id="L140">                    .orElseThrow(() -&gt; rejection(</span>
+<span class="fc" id="L140">                    .orElseThrow(() -&gt; rejection(</span>
                             &quot;rental&quot;, &quot;NOT_FOUND&quot;,
                             &quot;No active rental was found for this item.&quot;));
 <span class="fc" id="L143">        } catch (ValidationException exception) {</span>
 <span class="fc" id="L144">            throw exception;</span>
-<span class="nc" id="L145">        } catch (SQLException exception) {</span>
-<span class="nc" id="L146">            DatabaseException failure =</span>
+<span class="fc" id="L145">        } catch (SQLException exception) {</span>
+<span class="fc" id="L146">            DatabaseException failure =</span>
                     new DatabaseException(&quot;read active rental details&quot;, exception);
-<span class="nc" id="L148">            StructuredLogger.error(</span>
+<span class="fc" id="L148">            StructuredLogger.error(</span>
                     &quot;db.query&quot;,
-<span class="nc" id="L150">                    Map.of(&quot;op&quot;, &quot;rental.details.read&quot;),</span>
+<span class="fc" id="L150">                    Map.of(&quot;op&quot;, &quot;rental.details.read&quot;),</span>
                     failure);
-<span class="nc" id="L152">            throw failure;</span>
+<span class="fc" id="L152">            throw failure;</span>
 <span class="fc" id="L153">        } catch (DatabaseException exception) {</span>
 <span class="fc" id="L154">            StructuredLogger.error(</span>
                     &quot;db.query&quot;,
@@ -208,7 +208,7 @@ public class RentalService {
                 }
 
 <span class="fc" id="L210">                Rental returned = rentals.findById(connection, activeRental.id())</span>
-<span class="pc" id="L211">                        .orElseThrow(() -&gt; new SQLException(</span>
+<span class="fc" id="L211">                        .orElseThrow(() -&gt; new SQLException(</span>
                                 &quot;The returned rental could not be read back.&quot;));
 <span class="fc" id="L213">                connection.commit();</span>
 
@@ -225,14 +225,14 @@ public class RentalService {
             }
 <span class="fc" id="L226">        } catch (ValidationException exception) {</span>
 <span class="fc" id="L227">            throw exception;</span>
-<span class="nc" id="L228">        } catch (SQLException exception) {</span>
-<span class="nc" id="L229">            DatabaseException failure =</span>
+<span class="fc" id="L228">        } catch (SQLException exception) {</span>
+<span class="fc" id="L229">            DatabaseException failure =</span>
                     new DatabaseException(&quot;confirm rental return&quot;, exception);
-<span class="nc" id="L231">            StructuredLogger.error(</span>
+<span class="fc" id="L231">            StructuredLogger.error(</span>
                     &quot;db.query&quot;,
-<span class="nc" id="L233">                    Map.of(&quot;op&quot;, &quot;rental.return.confirm&quot;),</span>
+<span class="fc" id="L233">                    Map.of(&quot;op&quot;, &quot;rental.return.confirm&quot;),</span>
                     failure);
-<span class="nc" id="L235">            throw failure;</span>
+<span class="fc" id="L235">            throw failure;</span>
 <span class="fc" id="L236">        } catch (DatabaseException exception) {</span>
 <span class="fc" id="L237">            StructuredLogger.error(</span>
                     &quot;db.query&quot;,
@@ -254,9 +254,9 @@ public class RentalService {
             Exception failure) {
         try {
 <span class="fc" id="L256">            connection.rollback();</span>
-<span class="nc" id="L257">        } catch (SQLException rollbackFailure) {</span>
-<span class="nc" id="L258">            failure.addSuppressed(rollbackFailure);</span>
-<span class="nc" id="L259">            StructuredLogger.error(</span>
+<span class="fc" id="L257">        } catch (SQLException rollbackFailure) {</span>
+<span class="fc" id="L258">            failure.addSuppressed(rollbackFailure);</span>
+<span class="fc" id="L259">            StructuredLogger.error(</span>
                     &quot;db.transaction.rollback.failed&quot;, rollbackFailure);
 <span class="fc" id="L261">        }</span>
 <span class="fc" id="L262">    }</span>

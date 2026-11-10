@@ -73,11 +73,11 @@ public final class UserService {
 <span class="fc" id="L73">            logValidationRejection(exception);</span>
 <span class="fc" id="L74">            throw exception;</span>
 
-<span class="nc" id="L76">        } catch (DuplicateUsernameException exception) {</span>
-<span class="nc" id="L77">            StructuredLogger.warn(</span>
+<span class="fc" id="L76">        } catch (DuplicateUsernameException exception) {</span>
+<span class="fc" id="L77">            StructuredLogger.warn(</span>
                     &quot;user.validation.rejected | field=username | reason=DUPLICATE_USERNAME&quot;);
 
-<span class="nc" id="L80">            throw new ValidationException(</span>
+<span class="fc" id="L80">            throw new ValidationException(</span>
                     &quot;USER&quot;,
                     &quot;username&quot;,
                     &quot;DUPLICATE_USERNAME&quot;,
@@ -138,7 +138,7 @@ public final class UserService {
     }
 
     public String usernameForId(long userId) {
-<span class="pc bpc" id="L141" title="1 of 2 branches missed.">        if (userId &lt;= 0) {</span>
+<span class="fc bfc" id="L141" title="All 2 branches covered.">        if (userId &lt;= 0) {</span>
 <span class="nc" id="L142">            reject(</span>
                     &quot;id&quot;,
                     &quot;INVALID_ID&quot;,
@@ -147,24 +147,24 @@ public final class UserService {
 
         try {
 <span class="fc" id="L149">            Optional&lt;User&gt; result = userRepository.findById(userId);</span>
-<span class="pc bpc" id="L150" title="1 of 2 branches missed.">            if (result == null) {</span>
-<span class="nc" id="L151">                throw new IllegalStateException(</span>
+<span class="fc bfc" id="L150" title="All 2 branches covered.">            if (result == null) {</span>
+<span class="fc" id="L151">                throw new IllegalStateException(</span>
                         &quot;User repository returned an invalid result.&quot;);
             }
-<span class="pc bpc" id="L154" title="1 of 2 branches missed.">            if (result.isEmpty()) {</span>
+<span class="fc bfc" id="L154" title="All 2 branches covered.">            if (result.isEmpty()) {</span>
 <span class="nc" id="L155">                reject(</span>
                         &quot;id&quot;,
                         &quot;NOT_FOUND&quot;,
                         &quot;Owner information could not be found.&quot;);
             }
 <span class="fc" id="L160">            return result.get().username();</span>
-<span class="nc" id="L161">        } catch (ValidationException exception) {</span>
-<span class="nc" id="L162">            throw exception;</span>
-<span class="nc" id="L163">        } catch (RuntimeException exception) {</span>
-<span class="nc" id="L164">            StructuredLogger.error(</span>
+<span class="fc" id="L161">        } catch (ValidationException exception) {</span>
+<span class="fc" id="L162">            throw exception;</span>
+<span class="fc" id="L163">        } catch (RuntimeException exception) {</span>
+<span class="fc" id="L164">            StructuredLogger.error(</span>
                     &quot;user.lookup.failed | userId=&quot; + userId,
                     exception);
-<span class="nc" id="L167">            throw exception;</span>
+<span class="fc" id="L167">            throw exception;</span>
         }
     }
 

@@ -7,6 +7,7 @@ import tech.kood.rental.domain.User;
 import tech.kood.rental.domain.ValidationException;
 import tech.kood.rental.infrastructure.DatabaseConnection;
 import tech.kood.rental.repository.UserRepository;
+import tech.kood.rental.repository.exception.DuplicateUsernameException;
 import tech.kood.rental.security.PasswordHasher;
 
 import java.time.LocalDateTime;
@@ -132,6 +133,18 @@ class UserServiceTest {
         assertThrows(
                 ValidationException.class,
                 () -> userService.register("john_doe", "anotherPassword"));
+    }
+
+    @Test
+    void registerConvertsDuplicateInsertExceptionToValidationException() {
+        repository.throwDuplicateOnInsert = true;
+
+        ValidationException exception = assertThrows(
+                ValidationException.class,
+                () -> userService.register("john_doe", "password123"));
+
+        assertEquals("username", exception.getField());
+        assertEquals("DUPLICATE_USERNAME", exception.getReason());
     }
 
     @Test
@@ -284,6 +297,58 @@ class UserServiceTest {
     }
 
     // ---------------- FAKE REPOSITORY ----------------
+
+    // ---------------- USERNAME LOOKUP TESTS ----------------
+
+    @Test
+    void usernameForIdReturnsUsernameSuccessfully() {
+        long userId = userService.register("john_doe", "password123");
+        assertEquals("john_doe", userService.usernameForId(userId));
+    }
+
+    @Test
+    void usernameForIdRejectsZeroId() {
+        ValidationException exception = assertThrows(
+                ValidationException.class,
+                () -> userService.usernameForId(0));
+
+        assertEquals("id", exception.getField());
+        assertEquals("INVALID_ID", exception.getReason());
+    }
+
+    @Test
+    void usernameForIdRejectsNegativeId() {
+        ValidationException exception = assertThrows(
+                ValidationException.class,
+                () -> userService.usernameForId(-1));
+
+        assertEquals("id", exception.getField());
+        assertEquals("INVALID_ID", exception.getReason());
+    }
+
+    @Test
+    void usernameForIdRejectsMissingUser() {
+        ValidationException exception = assertThrows(
+                ValidationException.class,
+                () -> userService.usernameForId(999));
+
+        assertEquals("id", exception.getField());
+        assertEquals("NOT_FOUND", exception.getReason());
+    }
+
+    @Test
+    void usernameForIdRejectsNullRepositoryResult() {
+        repository.returnNullIdOptional = true;
+        assertThrows(IllegalStateException.class,
+                () -> userService.usernameForId(1));
+    }
+
+    @Test
+    void usernameForIdPropagatesRepositoryFailure() {
+        repository.throwOnFindById = true;
+        assertThrows(IllegalStateException.class,
+                () -> userService.usernameForId(1));
+    }
     private static class FakeUserRepository extends UserRepository {
 
                 private final Map<String, User> users = new HashMap<>();
@@ -294,7 +359,10 @@ class UserServiceTest {
                 private boolean returnUserWithoutId;
                 private boolean returnNullOptional;
                 private boolean throwOnInsert;
+        private boolean throwDuplicateOnInsert;
                 private boolean throwOnFind;
+                private boolean returnNullIdOptional;
+                private boolean throwOnFindById;
                 
                 FakeUserRepository() {
                     super(new DatabaseConnection("target/test-user-service.db"));
@@ -309,6 +377,11 @@ class UserServiceTest {
         public User insert(String username, String passwordHash) {
             if (throwOnInsert) {
                 throw new IllegalStateException("Simulated insert failure");
+            }
+
+            if (throwDuplicateOnInsert) {
+                throw new DuplicateUsernameException(
+                        new IllegalStateException("Simulated duplicate key"));
             }
 
             if (returnNullUser) {
@@ -334,6 +407,20 @@ class UserServiceTest {
             return user;
         }
 
+        @Override
+        public Optional<User> findById(long id) {
+            if (throwOnFindById) {
+                throw new IllegalStateException("Simulated ID lookup failure");
+            }
+
+            if (returnNullIdOptional) {
+                return null;
+            }
+
+            return users.values().stream()
+                    .filter(user -> user.id() != null && user.id() == id)
+                    .findFirst();
+        }
         @Override
         public Optional<User> findByUsername(String username) {
             if (throwOnFind) {
