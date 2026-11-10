@@ -165,8 +165,8 @@ public final class ItemService {
                             PAGE_SIZE,
                             offset);
 
-<span class="pc bpc" id="L168" title="1 of 2 branches missed.">            if (rented == null) {</span>
-<span class="nc" id="L169">                throw new IllegalStateException(</span>
+<span class="fc bfc" id="L168" title="All 2 branches covered.">            if (rented == null) {</span>
+<span class="fc" id="L169">                throw new IllegalStateException(</span>
                         &quot;Rented inventory could not be retrieved.&quot;);
             }
 
@@ -177,14 +177,14 @@ public final class ItemService {
 <span class="fc" id="L177">                            + &quot; item_count=&quot; + rented.size());</span>
 
 <span class="fc" id="L179">            return rented;</span>
-<span class="nc" id="L180">        } catch (ValidationException exception) {</span>
-<span class="nc" id="L181">            throw exception;</span>
-<span class="nc" id="L182">        } catch (RuntimeException exception) {</span>
-<span class="nc" id="L183">            StructuredLogger.error(</span>
+<span class="fc" id="L180">        } catch (ValidationException exception) {</span>
+<span class="fc" id="L181">            throw exception;</span>
+<span class="fc" id="L182">        } catch (RuntimeException exception) {</span>
+<span class="fc" id="L183">            StructuredLogger.error(</span>
                     &quot;inventory.rented.view.failed | user_id=&quot;
                             + authenticatedUserId,
                     exception);
-<span class="nc" id="L187">            throw exception;</span>
+<span class="fc" id="L187">            throw exception;</span>
         }
     }
 

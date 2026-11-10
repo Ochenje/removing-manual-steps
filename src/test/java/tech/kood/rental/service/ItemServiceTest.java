@@ -270,6 +270,150 @@ class ItemServiceTest {
     }
 
     // --------------------------------------------------
+
+    // --------------------------------------------------
+    // Rented inventory and inventory counts
+    // --------------------------------------------------
+
+    @Test
+    void viewRentedInventorySupportsPagination() {
+        for (long id = 1; id <= 6; id++) {
+            repository.addItem(
+                    item(id, OWNER_ID, ItemStatus.RENTED));
+        }
+
+        repository.addItem(
+                item(7, OWNER_ID, ItemStatus.AVAILABLE));
+
+        repository.addItem(
+                item(8, OTHER_USER_ID, ItemStatus.RENTED));
+
+        List<Item> result =
+                service.viewRentedInventory(OWNER_ID, 2);
+
+        assertEquals(1, result.size());
+        assertEquals(6L, result.get(0).id());
+        assertEquals(5, repository.lastLimit);
+        assertEquals(5, repository.lastOffset);
+    }
+
+    @Test
+    void viewRentedInventoryReturnsEmptyList() {
+        List<Item> result =
+                service.viewRentedInventory(OWNER_ID, 1);
+
+        assertNotNull(result);
+        assertTrue(result.isEmpty());
+    }
+
+    @Test
+    void viewRentedInventoryRejectsInvalidUser() {
+        assertThrows(
+                ValidationException.class,
+                () -> service.viewRentedInventory(0, 1));
+    }
+
+    @Test
+    void viewRentedInventoryRejectsInvalidPage() {
+        assertThrows(
+                ValidationException.class,
+                () -> service.viewRentedInventory(OWNER_ID, 0));
+
+        assertThrows(
+                ValidationException.class,
+                () -> service.viewRentedInventory(OWNER_ID, -1));
+    }
+
+    @Test
+    void viewRentedInventoryRejectsOverflowingPage() {
+        assertThrows(
+                ValidationException.class,
+                () -> service.viewRentedInventory(
+                        OWNER_ID,
+                        Integer.MAX_VALUE));
+    }
+
+    @Test
+    void viewRentedInventoryRejectsNullRepositoryResult() {
+        repository.nullRentedList = true;
+
+        assertThrows(
+                IllegalStateException.class,
+                () -> service.viewRentedInventory(OWNER_ID, 1));
+    }
+
+    @Test
+    void viewRentedInventoryHandlesRepositoryException() {
+        repository.rentedListFailure =
+                new RuntimeException("Database unavailable");
+
+        RuntimeException exception = assertThrows(
+                RuntimeException.class,
+                () -> service.viewRentedInventory(OWNER_ID, 1));
+
+        assertEquals("Database unavailable", exception.getMessage());
+    }
+
+    @Test
+    void countMyInventoryReturnsOwnerItemCount() {
+        repository.addItem(
+                item(1, OWNER_ID, ItemStatus.AVAILABLE));
+        repository.addItem(
+                item(2, OWNER_ID, ItemStatus.RENTED));
+        repository.addItem(
+                item(3, OTHER_USER_ID, ItemStatus.AVAILABLE));
+
+        assertEquals(2L, service.countMyInventory(OWNER_ID));
+    }
+
+    @Test
+    void countMyInventoryRejectsInvalidUser() {
+        assertThrows(
+                ValidationException.class,
+                () -> service.countMyInventory(0));
+    }
+
+    @Test
+    void countRentedInventoryReturnsRentedItemCount() {
+        repository.addItem(
+                item(1, OWNER_ID, ItemStatus.RENTED));
+        repository.addItem(
+                item(2, OWNER_ID, ItemStatus.RENTED));
+        repository.addItem(
+                item(3, OWNER_ID, ItemStatus.AVAILABLE));
+        repository.addItem(
+                item(4, OTHER_USER_ID, ItemStatus.RENTED));
+
+        assertEquals(2L, service.countRentedInventory(OWNER_ID));
+    }
+
+    @Test
+    void countRentedInventoryRejectsInvalidUser() {
+        assertThrows(
+                ValidationException.class,
+                () -> service.countRentedInventory(0));
+    }
+
+    @Test
+    void countAvailableItemsReturnsOtherUsersAvailableCount() {
+        repository.addItem(
+                item(1, OWNER_ID, ItemStatus.AVAILABLE));
+        repository.addItem(
+                item(2, OTHER_USER_ID, ItemStatus.AVAILABLE));
+        repository.addItem(
+                item(3, OTHER_USER_ID, ItemStatus.AVAILABLE));
+        repository.addItem(
+                item(4, OTHER_USER_ID, ItemStatus.RENTED));
+
+        assertEquals(2L, service.countAvailableItems(OWNER_ID));
+    }
+
+    @Test
+    void countAvailableItemsRejectsInvalidUser() {
+        assertThrows(
+                ValidationException.class,
+                () -> service.countAvailableItems(0));
+    }
     // Browse available items
     // --------------------------------------------------
 
@@ -384,9 +528,13 @@ class ItemServiceTest {
         repository.addItem(
                 item(1, OTHER_USER_ID, ItemStatus.AVAILABLE));
 
-        assertThrows(
+        ValidationException exception = assertThrows(
                 ValidationException.class,
                 () -> service.delistItem(OWNER_ID, 1));
+
+        assertEquals("ITEM", exception.getEntity());
+        assertEquals("ownerId", exception.getField());
+        assertEquals("OWNERSHIP_DENIED", exception.getReason());
     }
 
     @Test
@@ -394,9 +542,13 @@ class ItemServiceTest {
         repository.addItem(
                 item(1, OWNER_ID, ItemStatus.RENTED));
 
-        assertThrows(
+        ValidationException exception = assertThrows(
                 ValidationException.class,
                 () -> service.delistItem(OWNER_ID, 1));
+
+        assertEquals("ITEM", exception.getEntity());
+        assertEquals("status", exception.getField());
+        assertEquals("INVALID_STATE", exception.getReason());
     }
 
     @Test
@@ -416,9 +568,13 @@ class ItemServiceTest {
 
         repository.statusChangeResult = false;
 
-        assertThrows(
+        ValidationException exception = assertThrows(
                 ValidationException.class,
                 () -> service.delistItem(OWNER_ID, 1));
+
+        assertEquals("ITEM", exception.getEntity());
+        assertEquals("status", exception.getField());
+        assertEquals("STATE_CHANGED", exception.getReason());
     }
 
     @Test
@@ -450,23 +606,35 @@ class ItemServiceTest {
 
     @Test
     void relistItemRejectsInvalidUser() {
-        assertThrows(
+        ValidationException exception = assertThrows(
                 ValidationException.class,
                 () -> service.relistItem(0, 1));
+
+        assertEquals("ITEM", exception.getEntity());
+        assertEquals("ownerId", exception.getField());
+        assertEquals("INVALID_ID", exception.getReason());
     }
 
     @Test
     void relistItemRejectsInvalidItemId() {
-        assertThrows(
+        ValidationException exception = assertThrows(
                 ValidationException.class,
                 () -> service.relistItem(OWNER_ID, 0));
+
+        assertEquals("ITEM", exception.getEntity());
+        assertEquals("id", exception.getField());
+        assertEquals("INVALID_ID", exception.getReason());
     }
 
     @Test
     void relistItemRejectsMissingItem() {
-        assertThrows(
+        ValidationException exception = assertThrows(
                 ValidationException.class,
                 () -> service.relistItem(OWNER_ID, 99));
+
+        assertEquals("ITEM", exception.getEntity());
+        assertEquals("id", exception.getField());
+        assertEquals("NOT_FOUND", exception.getReason());
     }
 
     @Test
@@ -474,29 +642,39 @@ class ItemServiceTest {
         repository.addItem(
                 item(1, OTHER_USER_ID, ItemStatus.UNLISTED));
 
-        assertThrows(
+        ValidationException exception = assertThrows(
                 ValidationException.class,
                 () -> service.relistItem(OWNER_ID, 1));
+
+        assertEquals("ITEM", exception.getEntity());
+        assertEquals("ownerId", exception.getField());
+        assertEquals("OWNERSHIP_DENIED", exception.getReason());
     }
 
     @Test
     void relistItemRejectsAvailableItem() {
-        repository.addItem(
-                item(1, OWNER_ID, ItemStatus.AVAILABLE));
+        repository.addItem(item(1, OWNER_ID, ItemStatus.AVAILABLE));
 
-        assertThrows(
+        ValidationException exception = assertThrows(
                 ValidationException.class,
                 () -> service.relistItem(OWNER_ID, 1));
+
+        assertEquals("ITEM", exception.getEntity());
+        assertEquals("status", exception.getField());
+        assertEquals("INVALID_STATE", exception.getReason());
     }
 
     @Test
     void relistItemRejectsRentedItem() {
-        repository.addItem(
-                item(1, OWNER_ID, ItemStatus.RENTED));
+        repository.addItem(item(1, OWNER_ID, ItemStatus.RENTED));
 
-        assertThrows(
+        ValidationException exception = assertThrows(
                 ValidationException.class,
                 () -> service.relistItem(OWNER_ID, 1));
+
+        assertEquals("ITEM", exception.getEntity());
+        assertEquals("status", exception.getField());
+        assertEquals("INVALID_STATE", exception.getReason());
     }
 
     @Test
@@ -506,9 +684,13 @@ class ItemServiceTest {
 
         repository.statusChangeResult = false;
 
-        assertThrows(
+        ValidationException exception = assertThrows(
                 ValidationException.class,
                 () -> service.relistItem(OWNER_ID, 1));
+
+        assertEquals("ITEM", exception.getEntity());
+        assertEquals("status", exception.getField());
+        assertEquals("STATE_CHANGED", exception.getReason());
     }
 
     @Test
@@ -618,12 +800,14 @@ class ItemServiceTest {
         private boolean nullFindResult;
         private boolean nullOwnerList;
         private boolean nullAvailableList;
+        private boolean nullRentedList;
 
         private boolean statusChangeResult = true;
 
         private RuntimeException insertFailure;
         private RuntimeException findFailure;
         private RuntimeException listFailure;
+        private RuntimeException rentedListFailure;
         private RuntimeException statusFailure;
 
         FakeItemRepository() {
@@ -731,6 +915,56 @@ class ItemServiceTest {
                     .toList();
         }
 
+        @Override
+        public List<Item> listRentedByOwner(
+                long ownerId,
+                int limit,
+                int offset) {
+
+            if (rentedListFailure != null) {
+                throw rentedListFailure;
+            }
+
+            if (nullRentedList) {
+                return null;
+            }
+
+            lastLimit = limit;
+            lastOffset = offset;
+
+            return data.values().stream()
+                    .filter(item ->
+                            item.ownerId() == ownerId
+                                    && item.status() == ItemStatus.RENTED)
+                    .skip(offset)
+                    .limit(limit)
+                    .toList();
+        }
+
+        @Override
+        public long countByOwner(long ownerId) {
+            return data.values().stream()
+                    .filter(item -> item.ownerId() == ownerId)
+                    .count();
+        }
+
+        @Override
+        public long countRentedByOwner(long ownerId) {
+            return data.values().stream()
+                    .filter(item ->
+                            item.ownerId() == ownerId
+                                    && item.status() == ItemStatus.RENTED)
+                    .count();
+        }
+
+        @Override
+        public long countAvailableNotOwnedBy(long userId) {
+            return data.values().stream()
+                    .filter(item ->
+                            item.status() == ItemStatus.AVAILABLE
+                                    && item.ownerId() != userId)
+                    .count();
+        }
         @Override
         public boolean changeStatus(
                 long id,

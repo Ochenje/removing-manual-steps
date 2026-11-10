@@ -75,11 +75,13 @@ Run tests with `mvn test`; `mvn verify` also packages the application. JaCoCo
 generates the tracked HTML report at [`coverage/index.html`](coverage/index.html)
 and XML report at [`coverage/jacoco.xml`](coverage/jacoco.xml).
 
-The current full run reports 269 tests passing, with 0 failures and 0 errors.
-Coverage is 92.08% of instructions, 89.84% of lines, and 86.82% of branches.
-Remaining uncovered code is concentrated in application and seed-data entry
-points, startup/error paths, and less common database and CLI failure branches;
-these figures are reported as-is rather than presented as full coverage.
+The latest full verification (`mvn clean verify`) reports 295 tests passing,
+with 0 failures, 0 errors, and 0 skipped tests.
+
+The JaCoCo report records 94.37% instruction coverage, 92.63% line coverage,
+88.11% branch coverage, 99.41% method coverage, and 100% class coverage.
+These figures are reported as measured; the project does not claim 100%
+instruction, line, or branch coverage.
 
 ## Database design
 

@@ -1,5 +1,4 @@
--- Accounts for the rental tracker.
--- Other tables (items, rentals) will be added below by whoever builds them.
+-- Database schema for users, items and rentals.
 CREATE TABLE IF NOT EXISTS users (
                                      id          INTEGER PRIMARY KEY AUTOINCREMENT,   -- the database numbers each user itself
                                      username    TEXT NOT NULL UNIQUE                 -- a taken username is rejected by the database
