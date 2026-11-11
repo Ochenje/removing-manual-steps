@@ -1,3 +1,4 @@
+
 package tech.kood.rental;
 
 import tech.kood.rental.infrastructure.DatabaseConnection;
