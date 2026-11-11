@@ -28,6 +28,5 @@ COPY --from=builder /build/target/multi-user-rental-tracker-1.0.jar app.jar
 
 # Configuration environmental parameters exposed for target runtime path adjustments
 ENV DATABASE_PATH="data/app.db"
-EXPOSE 8080
 
 ENTRYPOINT ["sh", "-c", "java -jar app.jar ${DATABASE_PATH}"]

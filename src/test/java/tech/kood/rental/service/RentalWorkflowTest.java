@@ -373,4 +373,180 @@ class RentalWorkflowTest {
                 DatabaseException.class,
                 () -> failingService.confirmReturn(
                         ownerId, availableItem.id()));
-    }}
+    }
+    @Test
+    void rejectsRentalWhenItemStatusChangesBeforeUpdate() throws Exception {
+        ItemRepository changingItems = new ItemRepository(database) {
+            @Override
+            public boolean changeStatus(
+                    Connection connection,
+                    long id,
+                    ItemStatus expected,
+                    ItemStatus next) throws java.sql.SQLException {
+                return false;
+            }
+        };
+
+        RentalService changingService =
+                new RentalService(database, changingItems, rentals);
+
+        assertThrows(
+                ValidationException.class,
+                () -> changingService.rentItem(
+                        renterId, availableItem.id(), 2));
+
+        assertEquals(
+                ItemStatus.AVAILABLE,
+                items.findById(availableItem.id()).orElseThrow().status());
+
+        assertNull(rentals.findActiveByItemId(availableItem.id()).orElse(null));
+    }
+
+    @Test
+    void refusesToReadActiveRentalWhenRentedItemHasNoActiveRental() {
+        assertEquals(
+                true,
+                items.changeStatus(
+                        availableItem.id(),
+                        ItemStatus.AVAILABLE,
+                        ItemStatus.RENTED));
+
+        assertThrows(
+                ValidationException.class,
+                () -> service.getActiveRentalForOwner(
+                        ownerId, availableItem.id()));
+    }
+
+    @Test
+    void wrapsSqlExceptionWhenReadingActiveRental() {
+        service.rentItem(renterId, availableItem.id(), 3);
+
+        RentalRepository failingRentals = new RentalRepository(database) {
+            @Override
+            public java.util.Optional<Rental> findActiveByItemId(
+                    Connection connection, long itemId)
+                    throws java.sql.SQLException {
+                throw new java.sql.SQLException("simulated SQL failure");
+            }
+        };
+
+        RentalService failingService =
+                new RentalService(database, items, failingRentals);
+
+        assertThrows(
+                DatabaseException.class,
+                () -> failingService.getActiveRentalForOwner(
+                        ownerId, availableItem.id()));
+    }
+
+    @Test
+    void rollsBackReturnWhenRentalCannotBeReadBack() {
+        Rental active = service.rentItem(renterId, availableItem.id(), 3);
+
+        RentalRepository missingReadback = new RentalRepository(database) {
+            @Override
+            public java.util.Optional<Rental> findById(
+                    Connection connection, long id)
+                    throws java.sql.SQLException {
+                return java.util.Optional.empty();
+            }
+        };
+
+        RentalService failingService =
+                new RentalService(database, items, missingReadback);
+
+        assertThrows(
+                DatabaseException.class,
+                () -> failingService.confirmReturn(
+                        ownerId, availableItem.id()));
+
+        assertEquals(
+                ItemStatus.RENTED,
+                items.findById(availableItem.id()).orElseThrow().status());
+
+        assertNull(rentals.findById(active.id()).orElseThrow().returnedAt());
+    }
+
+    @Test
+    void propagatesDatabaseExceptionWhenCreatingRental() {
+        RentalRepository failingRentals = new RentalRepository(database) {
+            @Override
+            public Rental insert(Connection connection, Rental rental)
+                    throws java.sql.SQLException {
+                throw new DatabaseException(
+                        "simulated rental insertion failure",
+                        new java.sql.SQLException("simulated failure"));
+            }
+        };
+
+        RentalService failingService =
+                new RentalService(database, items, failingRentals);
+
+        assertThrows(
+                DatabaseException.class,
+                () -> failingService.rentItem(
+                        renterId, availableItem.id(), 2));
+
+        assertEquals(
+                ItemStatus.AVAILABLE,
+                items.findById(availableItem.id()).orElseThrow().status());
+
+        assertNull(rentals.findActiveByItemId(availableItem.id()).orElse(null));
+    }
+
+    @Test
+    void preservesOriginalFailureWhenRollbackAlsoFails() throws Exception {
+        DatabaseConnection failingDatabase = new DatabaseConnection(
+                tempDir.resolve("rental.db").toString()) {
+            @Override
+            public Connection getConnection() throws java.sql.SQLException {
+                Connection actual = super.getConnection();
+
+                return (Connection) java.lang.reflect.Proxy.newProxyInstance(
+                        Connection.class.getClassLoader(),
+                        new Class<?>[] {Connection.class},
+                        (proxy, method, arguments) -> {
+                            if (method.getName().equals("rollback")
+                                    && method.getParameterCount() == 0) {
+                                throw new java.sql.SQLException(
+                                        "simulated rollback failure");
+                            }
+
+                            try {
+                                return method.invoke(actual, arguments);
+                            } catch (java.lang.reflect.InvocationTargetException exception) {
+                                throw exception.getCause();
+                            }
+                        });
+            }
+        };
+
+        RentalRepository failingRentals = new RentalRepository(database) {
+            @Override
+            public Rental insert(Connection connection, Rental rental)
+                    throws java.sql.SQLException {
+                throw new java.sql.SQLException(
+                        "simulated rental insertion failure");
+            }
+        };
+
+        RentalService failingService = new RentalService(
+                failingDatabase, items, failingRentals);
+
+        DatabaseException failure = assertThrows(
+                DatabaseException.class,
+                () -> failingService.rentItem(
+                        renterId, availableItem.id(), 2));
+
+        assertEquals(
+                "simulated rental insertion failure",
+                failure.getCause().getMessage());
+
+        Throwable[] suppressed = failure.getCause().getSuppressed();
+
+        assertEquals(1, suppressed.length);
+        assertEquals(
+                "simulated rollback failure",
+                suppressed[0].getMessage());
+    }
+}

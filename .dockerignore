@@ -1,0 +1,11 @@
+﻿.git
+.idea
+.vscode
+target
+coverage
+data
+*.db
+*.db-shm
+*.db-wal
+*.bak
+*.patch
