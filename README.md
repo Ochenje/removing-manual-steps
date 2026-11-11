@@ -1,4 +1,4 @@
-# Multi-User Rental Tracker
+# removing-manual-steps
 
 A Java command-line application that allows multiple users to list items, browse items listed by others, and manage rentals. The application uses SQLite for persistent storage and BCrypt password hashing for account security.
 
@@ -47,25 +47,64 @@ The application enforces the following rules:
 
 ## Requirements
 
-- Java 25
-- Maven 3.9 or later
-- Docker (optional)
+- Java 25 and Maven 3.9 or later to build or test locally.
+- Docker with the Compose plugin to run the containerized app.
 
-## Build, Test and Run
+## Build and Test
 
-Build the application and run the full verification lifecycle:
+Run the full build and test suite:
 
 ```bash
 mvn clean verify
 ```
 
+The same command runs in the CI pipeline on every push and pull request. CI uploads the JaCoCo HTML and XML reports as the `jacoco-coverage-report` workflow artifact.
+The workflow checks out the source, installs Java 25 with Maven dependency caching, runs `clean verify`, and then uploads the coverage report.
+
+Run tests without packaging:
+
+```bash
+mvn test
+```
+
+## Run with Docker Compose
+
+Start the app from the repository root:
+
+```bash
+docker compose up
+```
+
+Compose builds the image from the existing `Dockerfile` and starts the interactive CLI. Use `docker compose up --build` to force a fresh image build. Press Ctrl+C to stop the app.
+
+Compose sets `DATABASE_PATH` and `LOG_PATH` and mounts two named volumes:
+
+| Volume | Contents |
+|---|---|
+| `rental-tracker-data` | SQLite database at `/opt/rental-tracker/data/app.db` |
+| `rental-tracker-logs` | Application log at `/opt/rental-tracker/logs/app.log` |
+
+Both volumes survive `docker compose down`, container restarts, and image rebuilds. To remove the persisted database and logs as well, run `docker compose down --volumes`.
+
+## Protect the Main Branch
+
+Configure branch protection for `main` in the repository hosting settings:
+
+1. Require changes to arrive through pull requests and disallow direct pushes to `main`.
+2. Require the status check **Rental Tracker CI / Build and test** before merging.
+3. Ensure pull request pages display this check so reviewers can see whether it passed without opening the workflow logs.
+
+The required check is reported by the `Rental Tracker CI` workflow's `Build and test` job.
+
+## Run the Executable JAR
+
 Launch the executable JAR:
 
 ```bash
-java -jar target/multi-user-rental-tracker-1.0.jar
+java -jar target/removing-manual-steps-1.0.jar
 ```
 
-The application initializes its SQLite database automatically.
+The application initializes its SQLite database automatically and writes logs to `logs/app.log`.
 
 ### Database Configuration
 
@@ -78,18 +117,20 @@ data/app.db
 You can configure a different database location using the `DATABASE_PATH` environment variable:
 
 ```bash
-DATABASE_PATH=/path/to/database.db java -jar target/multi-user-rental-tracker-1.0.jar
+DATABASE_PATH=/path/to/database.db java -jar target/removing-manual-steps-1.0.jar
 ```
 
 Alternatively, pass the database path as the first JAR argument:
 
 ```bash
-java -jar target/multi-user-rental-tracker-1.0.jar /path/to/database.db
+java -jar target/removing-manual-steps-1.0.jar /path/to/database.db
 ```
 
 When both options are supplied, the command-line argument takes precedence over the environment variable.
 
 Parent directories are created automatically when needed.
+
+Set `LOG_PATH` to choose another application log file location.
 
 ## Optional Demo Data
 
@@ -108,58 +149,14 @@ Generate the demo database using:
 
 ```bash
 mvn package
-java -cp target/multi-user-rental-tracker-1.0.jar tech.kood.rental.infrastructure.SeedData /path/to/demo.db
+java -cp target/removing-manual-steps-1.0.jar tech.kood.rental.infrastructure.SeedData /path/to/demo.db
 ```
 
 **Important:** Running `SeedData` against an existing database path replaces that database file. Use a new path or back up existing data before running the utility.
 
 The demo credentials are intended for development and demonstration purposes only.
 
-## Docker
-
-Build the Docker image:
-
-```bash
-docker build -t multi-user-rental-tracker .
-```
-
-Create a persistent Docker volume:
-
-```bash
-docker volume create rental-tracker-data
-```
-
-Run the application:
-
-```bash
-docker run --rm -it \
-  -v rental-tracker-data:/opt/rental-tracker/data \
-  multi-user-rental-tracker
-```
-
-The container stores the SQLite database at:
-
-```text
-/opt/rental-tracker/data/app.db
-```
-
-The `DATABASE_PATH` environment variable can be used to configure a different database location inside the container.
-
-The named Docker volume ensures that database data persists when the container is removed.
-
-## Testing and Code Coverage
-
-Run the test suite:
-
-```bash
-mvn test
-```
-
-Run the complete build and verification lifecycle:
-
-```bash
-mvn clean verify
-```
+## Code Coverage
 
 The latest recorded full verification completed with:
 

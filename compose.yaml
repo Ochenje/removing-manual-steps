@@ -1,0 +1,17 @@
+name: removing-manual-steps
+
+services:
+  app:
+    build: .
+    stdin_open: true
+    tty: true
+    environment:
+      DATABASE_PATH: /opt/rental-tracker/data/app.db
+      LOG_PATH: /opt/rental-tracker/logs/app.log
+    volumes:
+      - rental-tracker-data:/opt/rental-tracker/data
+      - rental-tracker-logs:/opt/rental-tracker/logs
+
+volumes:
+  rental-tracker-data:
+  rental-tracker-logs:

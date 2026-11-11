@@ -11,6 +11,7 @@ import tech.kood.rental.service.RentalService;
 import tech.kood.rental.service.UserService;
 import tech.kood.rental.transport.CliHandler;
 
+import java.io.IOException;
 import java.sql.SQLException;
 
 public final class Main {
@@ -25,6 +26,18 @@ public final class Main {
                 ? args[0]
                 : System.getenv().getOrDefault(
                         "DATABASE_PATH", DEFAULT_DATABASE_PATH);
+        String logPath = System.getenv().getOrDefault(
+                "LOG_PATH", "logs/app.log");
+        try {
+            StructuredLogger.configureFileLogging(logPath);
+        } catch (IOException exception) {
+            System.err.println(
+                    "The application could not open its log file: "
+                            + exception.getMessage());
+            System.exit(1);
+            return;
+        }
+
         DatabaseConnection database = new DatabaseConnection(databasePath);
 
         try {

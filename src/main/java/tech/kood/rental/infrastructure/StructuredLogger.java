@@ -1,8 +1,17 @@
 package tech.kood.rental.infrastructure;
 
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.io.StringWriter;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.time.Instant;
 import java.util.Map;
+import java.util.logging.FileHandler;
+import java.util.logging.Formatter;
+import java.util.logging.Handler;
 import java.util.logging.Level;
+import java.util.logging.LogRecord;
 import java.util.logging.Logger;
 
 /**
@@ -13,9 +22,44 @@ public final class StructuredLogger {
 
     private static final Logger LOGGER =
             Logger.getLogger("tech.kood.rental");
+    private static Handler fileHandler;
 
     private StructuredLogger() {
         // Utility class; do not instantiate.
+    }
+
+    public static synchronized void configureFileLogging(String logPath)
+            throws IOException {
+        Path file = Path.of(logPath).toAbsolutePath();
+        Path parent = file.getParent();
+        if (parent != null) {
+            Files.createDirectories(parent);
+        }
+
+        FileHandler newHandler = new FileHandler(file.toString(), true);
+        newHandler.setLevel(Level.ALL);
+        newHandler.setFormatter(new Formatter() {
+            @Override
+            public String format(LogRecord record) {
+                StringBuilder message =
+                        new StringBuilder(record.getMessage())
+                                .append(System.lineSeparator());
+                if (record.getThrown() != null) {
+                    StringWriter stackTrace = new StringWriter();
+                    record.getThrown().printStackTrace(new PrintWriter(stackTrace));
+                    message.append(stackTrace);
+                }
+                return message.toString();
+            }
+        });
+
+        if (fileHandler != null) {
+            LOGGER.removeHandler(fileHandler);
+            fileHandler.close();
+        }
+        LOGGER.addHandler(newHandler);
+        LOGGER.setLevel(Level.ALL);
+        fileHandler = newHandler;
     }
 
     public static void info(String event) {
